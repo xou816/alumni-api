@@ -8,14 +8,15 @@ import {WordArray} from "../utils/word-array";
 import {HTMLDocument, Element, parseHtmlString} from "libxmljs";
 import * as FormData from "form-data";
 
-import {fetch, asText} from "../utils/fetch";
+import fetch, {asText} from "../utils/fetch";
 import {splitLen} from "../utils/utils";
 import {AlumniProvider, Alumni, FullAlumni, Query, Field, Sex} from "./api";
 
-const SOURCE = 'centrale-carrieres';
+const SOURCE = 'cc';
 const BATCH_SIZE = 50;
 const LOGIN_PAGE = 'https://www.centrale-carrieres.com/err/403.phtml';
 const LOGIN_REQ = 'https://www.centrale-carrieres.com/login.php';
+const LOGOUT_REQ = 'https://www.centrale-carrieres.com/compte/logout.php';
 const SEARCH_REQ = 'https://www.centrale-carrieres.com/annuaire/index.php';
 const DETAILS_REQ = 'https://www.centrale-carrieres.com/annuaire/view.php';
 
@@ -84,8 +85,8 @@ function queryForm(query: Query) {
 	let updated: Query = {
 		[Field.FIRST_NAME]: '',
 		[Field.LAST_NAME]: '',
-		CLASS_1: '',
-		CLASS_2: '',
+		class_1: '',
+		class_2: '',
 		[Field.COMPANY]: '',
 		...query
 	};
@@ -99,8 +100,8 @@ function queryForm(query: Query) {
 	form.append('pro_fonction_desc', '');
 	form.append('pro_organisation', updated[Field.COMPANY]);
 	form.append('type', 1);
-	form.append('promo1', updated.CLASS_1);
-	form.append('promo2', updated.CLASS_2);
+	form.append('promo1', updated.class_1);
+	form.append('promo2', updated.class_2);
 	form.append('Rechercher', 'Rechercher');
 	return form;
 };
@@ -179,6 +180,10 @@ const CentraleCarrieres: AlumniProvider = {
 			.map(input => loginForm(input.attr('value').value(), username, password))
 			.flatMap(form => fetch(LOGIN_REQ, {method: 'POST', body: form, headers: form.getHeaders()}))
 			.map(res => res.status === 200);
+	},
+
+	logout() {
+		return fetch(LOGOUT_REQ).map(_ => true);
 	},
 
 	search(query) {

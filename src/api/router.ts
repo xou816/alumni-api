@@ -1,9 +1,13 @@
 import {Router, Request} from "express";
+import {Observable} from "rxjs";
+
 import CentraleCarrieres from "../lib/centrale-carrieres";
 import Alumnis from "../lib/alumnis";
-import {AlumniProvider} from "../lib/api";
+import {AlumniProvider, Field} from "../lib/api";
+import {AggregatedAlumniProvider} from "../lib/utils";
 import {Credentials, getCredentials, updateCredentials} from "./auth";
 
+const AGG = new AggregatedAlumniProvider([Alumnis, CentraleCarrieres]);
 const SOURCES = {
 	[Alumnis.name()]: Alumnis,
 	[CentraleCarrieres.name()]: CentraleCarrieres
@@ -38,11 +42,13 @@ router.post('/auth/:source', (req, res) => {
 			.subscribe(() => {
 				res.status(202);
 				res.send({
-					message: 'Authentication details saved for ' + source
+					message: 'Authentication details saved',
+					source: source,
+					user: creds!.username
 				});
-			}, error => {
+			}, err => {
 				res.status(500);
-				res.send({error});
+				res.send();
 			});
 	} else {
 		res.status(403);
@@ -50,23 +56,62 @@ router.post('/auth/:source', (req, res) => {
 	}
 });
 
+function searchFromLoggedProvider(provider: AlumniProvider, req: Request) {
+	let count = req.query.count == null ? 10 : parseInt(req.query.count, 10);
+	let details = req.query.details != null;
+	let query = req.query;
+	if (query['class'] != null) {
+		let s = query['class'].split('-');
+		query.class_1 = s[0];
+		query.class_2 = s[s.length - 1];
+	}
+	return provider.search(query)
+		.flatMap(details ? provider.getDetails : t => Observable.of(t))
+		.take(count)
+		.toArray()
+		.flatMap(res => provider.logout().map(_ => res))
+		.map(arr => JSON.stringify(arr));
+}
+
 router.get('/search/:source', (req, res) => {
 	let source = req.params.source;
 	let provider: AlumniProvider = SOURCES[source];
 	let creds = parseAuthHeader(req);
 	if (provider != null && creds != null) {
 		getCredentials(creds, source)
-			.filter(creds => creds != null)
-			.flatMap(creds => provider.login(creds!.username, creds!.password))
-			.flatMap(_ => provider.search(req.query))
-			.flatMap(provider.getDetails)
-			.take(10)
-			.toArray()
-			.map(arr => JSON.stringify(arr))
-			.subscribe(str => res.send(str), 
-				err => res.sendStatus(500));
+			.flatMap(creds => creds == null ? 
+				Observable.throw('Invalid credentials') :
+				provider.login(creds.username, creds.password))
+			.flatMap(_ => searchFromLoggedProvider(provider, req))
+			.subscribe(str => {
+				res.send(str);
+			}, err => {
+				console.error(err);
+				res.status(500);
+				res.send();
+			});
 	} else {
-		res.sendStatus(403);
+		res.status(403);
+		res.send();
+	}
+});
+
+router.get('/searchAll', (req, res) => {
+	let creds = parseAuthHeader(req);
+	if (creds != null) {
+		getCredentials(creds)
+			.filter(creds => creds != null)
+			.flatMap(creds => AGG.loginMany(creds!))
+			.flatMap(_ => searchFromLoggedProvider(AGG, req))
+			.subscribe(str => {
+				res.send(str);
+			}, err => {
+				res.status(500);
+				res.send();
+			});
+	} else {
+		res.status(403);
+		res.send();
 	}
 });
 

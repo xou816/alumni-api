@@ -17,10 +17,15 @@ export function getCredentials(credentials: Credentials, source?: string) {
 				console.error(err);
 				observer.error(err);
 			} else {
-				if (reply != null) {		
-					let bytes = AES.decrypt(reply, credentials.password);
-					let obj = JSON.parse(bytes.toString(Utf8));
-					observer.next(source == null ? obj : obj[source]);
+				if (reply != null) {
+					try {
+						let bytes = AES.decrypt(reply, credentials.password);
+						let obj = JSON.parse(bytes.toString(Utf8));
+						observer.next(source == null ? obj : obj[source]);
+					} catch (error) {
+						console.error(err);
+						observer.next(null);
+					}
 				} else {
 					observer.next(null);	
 				}

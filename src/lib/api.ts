@@ -1,22 +1,22 @@
 import {Observable} from "rxjs";
 
 export enum Field {
-	ID = 'ID', 
-	SOURCE = 'SOURCE', 
-	URL = 'URL', 
-	SEX = 'SEX', 
-	FIRST_NAME = 'FIRST_NAME', 
-	LAST_NAME = 'LAST_NAME', 
-	CLASS = 'CLASS', 
-	COMPANY = 'COMPANY',
-	SCHOOL = 'SCHOOL',
-	EMAIL = 'EMAIL',
-	PHONE = 'PHONE'
+	ID = 'id', 
+	SOURCE = 'source', 
+	URL = 'url', 
+	SEX = 'sex', 
+	FIRST_NAME = 'first_name', 
+	LAST_NAME = 'last_name', 
+	CLASS = 'class', 
+	COMPANY = 'company',
+	SCHOOL = 'school',
+	EMAIL = 'email',
+	PHONE = 'phone'
 }
 
 export type Query = Partial<{
-	CLASS_1: number|string,
-	CLASS_2: number|string,
+	class_1: number|string,
+	class_2: number|string,
 	[Field.FIRST_NAME]: string,
 	[Field.LAST_NAME]: string,
 	[Field.COMPANY]: string
@@ -46,6 +46,7 @@ export type FullAlumni = Meta & Details;
 export interface AlumniProvider {
 	name(): string;
 	login(username: string, password: string): Observable<boolean>;
+	logout(): Observable<boolean>;
 	search(query: Query): Observable<Alumni>;
 	getDetails(alumni: Alumni): Observable<FullAlumni>;
 }

@@ -3,13 +3,14 @@ import {HTMLDocument, Element, parseHtmlString} from "libxmljs";
 import * as FormData from "form-data";
 import {stringify} from "querystring";
 
-import {fetch, asText} from "../utils/fetch";
+import fetch, {asText} from "../utils/fetch";
 import {trimInner, flatten} from "../utils/utils";
 import {AlumniProvider, Alumni, FullAlumni, Query, Field, Sex} from "./api";
 
 const SOURCE = 'alumnis';
 const FIRST_PAGE = 'https://annuaire.centraliens-nantes.net';
 const LOGIN_REQ = 'https://annuaire.centraliens-nantes.net/index.php/login';
+const LOGOUT_REQ = 'https://annuaire.centraliens-nantes.net/index.php/logout';
 const SEARCH_REQ = 'https://annuaire.centraliens-nantes.net/index.php/annuaire/search';
 const DETAILS_REQ = 'https://annuaire.centraliens-nantes.net/index.php/annuaire/show/individu_id/';
 
@@ -43,8 +44,8 @@ function getLastPage(doc: HTMLDocument): number {
 const queryMapper: {[k: string]: string} = {
 	[Field.FIRST_NAME]: 'individu_nom',
 	[Field.LAST_NAME]: 'individu_prenom',
-	CLASS_1: 'promotion_debut',
-	CLASS_2: 'promotion_fin',
+	class_1: 'promotion_debut',
+	class_2: 'promotion_fin',
 	[Field.COMPANY]: 'entreprise_nom'
 }
 
@@ -131,7 +132,6 @@ const Alumnis: AlumniProvider = {
 		return SOURCE;
 	},
 
-
 	login(username, password) {
 		let body = stringify({
 			'signin[username]': username,
@@ -146,6 +146,10 @@ const Alumnis: AlumniProvider = {
 			.flatMap(_ => fetch(LOGIN_REQ, { method: 'POST', body: body, headers: headers }))
 			.flatMap(asText)
 			.map(_ => true);
+	},
+
+	logout() {
+		return fetch(LOGOUT_REQ).map(_ => true);
 	},
 
 	search(query) {
