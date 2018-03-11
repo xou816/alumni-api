@@ -13,18 +13,20 @@ const LOGIN_REQ = 'https://annuaire.centraliens-nantes.net/index.php/login';
 const SEARCH_REQ = 'https://annuaire.centraliens-nantes.net/index.php/annuaire/search';
 const DETAILS_REQ = 'https://annuaire.centraliens-nantes.net/index.php/annuaire/show/individu_id/';
 
-const NAME_REGEX = /^([-A-Z ]+)( (?:[A-Z][-a-z]+ )+)\(née [-A-Z ]+\)?$/;
+const NAME_REGEX = /^([-A-Z ]+)( (?:[A-Z][-a-zÀ-ú]+ ?)+)(?:\(née ([-A-Z ]+)\))?$/;
 function getAlumnis(doc: HTMLDocument): Alumni[] {
 	return doc.find('//div[@id="content"]//table[@class="striped"]//tr')
 		.map(tr => tr.find('td'))
 		.map(tds => {
 			let id = tds[0].get('a')!.attr('href').value().split('individu_id/').pop() || null;
-			let res = NAME_REGEX.exec(trimInner(tds[0].text())) || Array.from({length: 4}, x => '');
+			let fixed = trimInner(tds[0].text());
+			let res = NAME_REGEX.exec(fixed) || Array.from({length: 4}, x => '');
+			let born = res[3] != null ? ' ' + res[3].trim() : '';
 			return {
 				[Field.ID]: id,
 				[Field.SOURCE]: SOURCE,
 				[Field.URL]: DETAILS_REQ + id,
-				[Field.LAST_NAME]: res[1].trim() + ' ' + res[3].trim(),
+				[Field.LAST_NAME]: res[1].trim() + born,
 				[Field.FIRST_NAME]: res[2].trim(),
 				[Field.CLASS]: parseInt(tds[1].text() || '', 10)
 			};
