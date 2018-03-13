@@ -1,27 +1,35 @@
 import {Observable} from "rxjs";
 import {AlumniProvider, Alumni, Field, Query} from "./api";
+import {UsernamePasswordCredentials, Keyring, AggregatedCredentials} from "./credentials";
 
-export class AggregatedAlumniProvider implements AlumniProvider {
+export class AggregatedAlumniProvider implements AlumniProvider<UsernamePasswordCredentials> {
 
-	protected providers: AlumniProvider[];
+	protected providers: AlumniProvider<any>[];
+	protected keyring: Keyring<UsernamePasswordCredentials>;
 
-	constructor(providers: AlumniProvider[]) {
+	constructor(providers: AlumniProvider<any>[], keyring: Keyring<UsernamePasswordCredentials>) {
 		this.providers = providers;
+		this.keyring = keyring;
 	}
 
-	protected providerFor(source: string): AlumniProvider {
+	protected providerFor(source: string): AlumniProvider<any> {
 		let provider = this.providers
-			.filter(p => p.name() === source).shift();
+			.filter(p => p.source() === source).shift();
 		if (provider == null) throw new Error('No known provider for this alumni!');
 		return provider;
 	}
 
-	name() {
+	source() {
 		return 'aggregated';
 	}
 
-	login(username: string, password: string) {
-		return Observable.of(false);
+	login(master: UsernamePasswordCredentials) {
+		return this.keyring.getCredentials(master)
+			.flatMap(creds => Object.keys(creds).reduce((acc: Observable<boolean>, source) => {
+				return acc.flatMap(res => this.providerFor(source)
+						.login(creds[source])
+						.map(ok => ok && res));
+			}, Observable.of(true)));
 	}
 
 	logout() {
@@ -30,18 +38,8 @@ export class AggregatedAlumniProvider implements AlumniProvider {
 			.reduce((acc, cur) => acc.flatMap(v1 => cur.map(v2 => v1 && v2)), Observable.of(true));
 	}
 
-	loginMany(creds: {[source: string]: {username: string, password: string}}): Observable<boolean> {
-		return Object.keys(creds).reduce((acc: Observable<boolean>, source) => {
-			return acc.flatMap(res => this.providerFor(source)
-					.login(creds[source].username, creds[source].password)
-					.map(ok => ok && res));
-		}, Observable.of(true));
-	}
-
 	search(query: Query) {
-		return this.providers
-			.map(provider => provider.search(query))
-			.reduce((acc, cur) => acc.concat(cur));
+		return Observable.merge(...this.providers.map(p => p.search(query)));
 	}
 
 	getDetails(alumni: Alumni) {
@@ -49,4 +47,13 @@ export class AggregatedAlumniProvider implements AlumniProvider {
 		return provider.getDetails(alumni);
 	}
 
+}
+
+export function getLowerClass(class_: string): string {
+	return class_.split('-')[0];
+}
+
+export function getUpperClass(class_: string): string {
+	let s = class_.split('-');
+	return s[s.length - 1];
 }

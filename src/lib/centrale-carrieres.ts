@@ -8,9 +8,11 @@ import {WordArray} from "../utils/word-array";
 import {HTMLDocument, Element, parseHtmlString} from "libxmljs";
 import * as FormData from "form-data";
 
-import fetch, {asText} from "../utils/fetch";
+import {UsernamePasswordCredentials} from "./credentials";
+import {Fetch, asText} from "../utils/fetch";
 import {splitLen} from "../utils/utils";
 import {AlumniProvider, Alumni, FullAlumni, Query, Field, Sex} from "./api";
+import {getLowerClass, getUpperClass} from "./utils";
 
 const SOURCE = 'cc';
 const BATCH_SIZE = 50;
@@ -82,11 +84,10 @@ function getAlumnis(doc: HTMLDocument): Alumni[] {
 }
 
 function queryForm(query: Query) {
-	let updated: Query = {
+	let updated = {
 		[Field.FIRST_NAME]: '',
 		[Field.LAST_NAME]: '',
-		class_1: '',
-		class_2: '',
+		[Field.CLASS]: '',
 		[Field.COMPANY]: '',
 		...query
 	};
@@ -100,24 +101,11 @@ function queryForm(query: Query) {
 	form.append('pro_fonction_desc', '');
 	form.append('pro_organisation', updated[Field.COMPANY]);
 	form.append('type', 1);
-	form.append('promo1', updated.class_1);
-	form.append('promo2', updated.class_2);
+	form.append('promo1', getLowerClass(updated[Field.CLASS]));
+	form.append('promo2', getUpperClass(updated[Field.CLASS]));
 	form.append('Rechercher', 'Rechercher');
 	return form;
 };
-
-function searchPaged(query: Query, start: number, last?: number): Observable<Alumni> {
-	let form = queryForm(query);
-	return fetch(SEARCH_REQ + '?start=' + start, { method: 'POST', body: form, headers: form.getHeaders() })
-		.flatMap(asText)
-		.map(parseHtmlString)
-		.flatMap(doc => {
-			last = last == null ? getLastOffset(doc) : last;
-			let next = start + BATCH_SIZE;
-			return Observable.from(getAlumnis(doc))
-				.concat(next <= last ? searchPaged(query, next, last) : Observable.from([]));
-		});
-}
 
 function getCoords(doc: HTMLDocument): string[][] {
 	return doc.find('//table[@class="Tmpl_Table_Fiche"]//table//td')
@@ -161,42 +149,59 @@ function formatCoords(coords: string[][], alumni: Alumni): FullAlumni {
 		...alumni,
 		...res,
 		[Field.EMAIL]: others.courriel || [],
-		[Field.PHONE]: others.mob.concat(others.tel) || [],
+		[Field.PHONE]: (others.mob || []).concat(others.tel || []),
 		[Field.COMPANY]: others.organisation || []
 	};
 };
 
-const CentraleCarrieres: AlumniProvider = {
+export default class CentraleCarrieres implements AlumniProvider<UsernamePasswordCredentials> {
 
-	name() {
+	private fetch: Fetch;
+
+	private searchPaged(query: Query, start: number, last?: number): Observable<Alumni> {
+		let form = queryForm(query);
+		return this.fetch(SEARCH_REQ + '?start=' + start, { method: 'POST', body: form, headers: form.getHeaders() })
+			.flatMap(asText)
+			.map(parseHtmlString)
+			.flatMap(doc => {
+				last = last == null ? getLastOffset(doc) : last;
+				let next = start + BATCH_SIZE;
+				return Observable.from(getAlumnis(doc))
+					.concat(next <= last ? this.searchPaged(query, next, last) : Observable.from([]));
+			});
+	}
+
+	constructor(fetch: Fetch) {
+		this.fetch = fetch;
+	}
+
+	source() {
 		return SOURCE;
-	},
+	}
 
-	login(username, password) {
-		return fetch(LOGIN_PAGE)
+	login(creds: UsernamePasswordCredentials) {
+		return this.fetch(LOGIN_PAGE)
 			.flatMap(asText)
 			.map(parseHtmlString)
 			.map(getChallenge)
-			.map(input => loginForm(input.attr('value').value(), username, password))
-			.flatMap(form => fetch(LOGIN_REQ, {method: 'POST', body: form, headers: form.getHeaders()}))
+			.map(input => loginForm(input.attr('value').value(), creds.username, creds.password))
+			.flatMap(form => this.fetch(LOGIN_REQ, {method: 'POST', body: form, headers: form.getHeaders()}))
 			.map(res => res.status === 200);
-	},
+	}
 
 	logout() {
-		return fetch(LOGOUT_REQ).map(_ => true);
-	},
+		return this.fetch(LOGOUT_REQ).map(_ => true);
+	}
 
-	search(query) {
-		return searchPaged(query, 0);
-	},
+	search(query: Query) {
+		return this.searchPaged(query, 0);
+	}
 
-	getDetails(alumni) {
-		return fetch(alumni[Field.URL])
+	getDetails(alumni: Alumni) {
+		return this.fetch(alumni[Field.URL])
 			.flatMap(asText)
 			.map(parseHtmlString)
 			.map(getCoords)
 			.map(coords => formatCoords(coords, alumni));
 	}
-};
-
-export default CentraleCarrieres;
+}

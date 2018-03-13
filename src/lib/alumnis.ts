@@ -3,9 +3,11 @@ import {HTMLDocument, Element, parseHtmlString} from "libxmljs";
 import * as FormData from "form-data";
 import {stringify} from "querystring";
 
-import fetch, {asText} from "../utils/fetch";
+import {UsernamePasswordCredentials} from "./credentials";
+import {Fetch, asText} from "../utils/fetch";
 import {trimInner, flatten} from "../utils/utils";
 import {AlumniProvider, Alumni, FullAlumni, Query, Field, Sex} from "./api";
+import {getLowerClass, getUpperClass} from "./utils";
 
 const SOURCE = 'alumnis';
 const FIRST_PAGE = 'https://annuaire.centraliens-nantes.net';
@@ -44,28 +46,21 @@ function getLastPage(doc: HTMLDocument): number {
 const queryMapper: {[k: string]: string} = {
 	[Field.FIRST_NAME]: 'individu_nom',
 	[Field.LAST_NAME]: 'individu_prenom',
-	class_1: 'promotion_debut',
-	class_2: 'promotion_fin',
+	classLower: 'promotion_debut',
+	classUpper: 'promotion_fin',
 	[Field.COMPANY]: 'entreprise_nom'
 }
 
 function buildQuery(query: Query, page: number): string {
-	return SEARCH_REQ + '?' + stringify(Object.keys(query).reduce((acc: {[k: string]: string}, key: string) => {
-		acc['recherche[' + (queryMapper[key] || key) + ']'] = (query as {[k:string]: string})[key];
+	let fixedQuery: {[k:string]: string|undefined} = {
+		...query, 
+		classLower: getLowerClass(query[Field.CLASS] || ''), 
+		classUpper: getUpperClass(query[Field.CLASS] || '')
+	};
+	return SEARCH_REQ + '?' + stringify(Object.keys(fixedQuery).reduce((acc: {[k: string]: string}, key: string) => {
+		acc['recherche[' + (queryMapper[key] || key) + ']'] = fixedQuery[key]!;
 		return acc;
 	}, {commit: 'Rechercher', page: page.toString()}));
-}
-
-function searchPaged(query: Query, page: number, last?: number): Observable<Alumni> {
-	return fetch(buildQuery(query, page))
-		.flatMap(asText)
-		.map(parseHtmlString)
-		.flatMap(doc => {
-			last = last == null ? getLastPage(doc) : last;
-			let next = page + 1;
-			return Observable.from(getAlumnis(doc))
-				.concat(next <= last ? searchPaged(query, next, last) : Observable.from([]));
-		});
 }
 
 const JOB_REGEX = /^(.+) \([0-9]{4}[A-Z]\) - \((.+) à (.+)\)$/i;
@@ -126,43 +121,58 @@ function parseAlumni(doc: HTMLDocument, alumni: Alumni): FullAlumni {
 	};
 }
 
-const Alumnis: AlumniProvider = {
+export default class Alumnis implements AlumniProvider<UsernamePasswordCredentials> {
 
-	name() {
+	private fetch: Fetch;
+
+	private searchPaged(query: Query, page: number, last?: number): Observable<Alumni> {
+		return this.fetch(buildQuery(query, page))
+			.flatMap(asText)
+			.map(parseHtmlString)
+			.flatMap(doc => {
+				last = last == null ? getLastPage(doc) : last;
+				let next = page + 1;
+				return Observable.from(getAlumnis(doc))
+					.concat(next <= last ? this.searchPaged(query, next, last) : Observable.from([]));
+			});
+	}
+
+	constructor(fetch: Fetch) {
+		this.fetch = fetch;
+	}
+
+	source() {
 		return SOURCE;
-	},
+	}
 
-	login(username, password) {
+	login(creds: UsernamePasswordCredentials) {
 		let body = stringify({
-			'signin[username]': username,
-			'signin[password]': password
+			'signin[username]': creds.username,
+			'signin[password]': creds.password
 		});
 		let headers = {
 			'content-type': 'application/x-www-form-urlencoded',
 			'content-length': body.length.toString(),
 			'user-agent': ''
 		};
-		return fetch(FIRST_PAGE)
-			.flatMap(_ => fetch(LOGIN_REQ, { method: 'POST', body: body, headers: headers }))
+		return this.fetch(FIRST_PAGE)
+			.flatMap(_ => this.fetch(LOGIN_REQ, { method: 'POST', body: body, headers: headers }))
 			.flatMap(asText)
 			.map(_ => true);
-	},
+	}
 
 	logout() {
-		return fetch(LOGOUT_REQ).map(_ => true);
-	},
+		return this.fetch(LOGOUT_REQ).map(_ => true);
+	}
 
-	search(query) {
-		return searchPaged(query, 1);
-	},
+	search(query: Query) {
+		return this.searchPaged(query, 1);
+	}
 
-	getDetails(alumni) {
-		return fetch(alumni[Field.URL])
+	getDetails(alumni: Alumni) {
+		return this.fetch(alumni[Field.URL])
 			.flatMap(asText)
 			.map(parseHtmlString)
 			.map(doc => parseAlumni(doc, alumni));		
 	}
-
 }
-
-export default Alumnis;

@@ -1,65 +1,80 @@
 import {Observable, Observer} from "rxjs";
 import {AES} from "crypto-js";
 import * as Utf8 from "crypto-js/enc-utf8";
+import {RedisClient} from "redis";
+
 import createRedisClient from "./redis";
+import {Keyring, UsernamePasswordCredentials, AggregatedCredentials} from "../lib/credentials";
 
-let client = createRedisClient();
+const client = createRedisClient();
 
-export type Credentials = {username: string, password: string};
-export type AggregatedCredentials = {[k: string]: Credentials};
+export class RedisKeyring implements Keyring<UsernamePasswordCredentials> {
 
-export function getCredentials(credentials: Credentials): Observable<AggregatedCredentials|null>;
-export function getCredentials(credentials: Credentials, source: string): Observable<Credentials|null>;
-export function getCredentials(credentials: Credentials, source?: string) {
-	return Observable.create((observer: Observer<Credentials|AggregatedCredentials|null>) => {
-		client.get(credentials.username, (err, reply) => {
-			if (err) {
-				console.error(err);
-				observer.error(err);
-			} else {
-				if (reply != null) {
-					try {
-						let bytes = AES.decrypt(reply, credentials.password);
-						let obj = JSON.parse(bytes.toString(Utf8));
-						observer.next(source == null ? obj : obj[source]);
-					} catch (error) {
-						console.error(err);
-						observer.next(null);
-					}
-				} else {
-					observer.next(null);	
-				}
-				observer.complete();
-			}
-		});
-	});
-}
+	private client: RedisClient;
 
-export function setCredentials(credentials: Credentials, agg: AggregatedCredentials): Observable<void> {
-	let enc: string;
-	try {
-		enc = AES.encrypt(JSON.stringify(agg), credentials.password).toString();
-	} catch (err) {
-		return Observable.throw(err);
+	constructor(client: RedisClient) {
+		this.client = client;
 	}
-	return Observable.create((obs: Observer<void>) => {
-		client.set(credentials.username, enc, (err, reply) => {
-			if (err) {
-				console.error(err);
-				obs.error(err);
-			} else {
-				obs.next();
-				obs.complete();
-			}
+
+	private decryptReply(reply: string, key: string): any|null {
+		try {
+			let bytes = AES.decrypt(reply, key);
+			let obj = JSON.parse(bytes.toString(Utf8));
+			return obj;
+		} catch (error) {
+			return null;
+		}
+	}
+
+	private setCredentials(master: UsernamePasswordCredentials, agg: AggregatedCredentials): Observable<boolean> {
+		let enc: string;
+		try {
+			enc = AES.encrypt(JSON.stringify(agg), master.password).toString();
+		} catch (err) {
+			return Observable.throw(err);
+		}
+		return Observable.create((obs: Observer<boolean>) => {
+			client.set(master.username, enc, (err, reply) => {
+				if (err) {
+					console.error(err);
+					obs.error(err);
+				} else {
+					obs.next(true);
+					obs.complete();
+				}
+			});
 		});
-	});
+	}
+
+	getCredentials(master: UsernamePasswordCredentials): Observable<AggregatedCredentials>;
+	getCredentials<C>(master: UsernamePasswordCredentials, source: string): Observable<C>;
+	getCredentials<C>(master: UsernamePasswordCredentials, source?: string): Observable<C|AggregatedCredentials> {
+		return Observable.create((observer: Observer<C|AggregatedCredentials|null>) => {
+			client.get(master.username, (err, reply) => {
+				if (err) {
+					console.error(err);
+					observer.error(err);
+				} else {
+					if (reply != null) {
+						let decrypted = this.decryptReply(reply, master.password);
+						observer.next(source == null ? decrypted : decrypted[source]);
+					} else {
+						observer.next({});
+					}
+					observer.complete();
+				}
+			});
+		});
+	}
+
+	updateCredentials<C>(master: UsernamePasswordCredentials, source: string, newCred: C): Observable<boolean> {
+		return this.getCredentials(master)
+			.flatMap(agg => {
+				let newAgg = {[source]: newCred};
+				newAgg = agg == null ? newAgg : {...agg, ...newAgg};
+				return this.setCredentials(master, newAgg);
+			});
+	}
 }
 
-export function updateCredentials(creds: Credentials, source: string, sourceCred: Credentials): Observable<void> {
-	return getCredentials(creds)
-		.flatMap(agg => {
-			let newAgg = {[source]: sourceCred};
-			newAgg = agg == null ? newAgg : {...agg, ...newAgg};
-			return setCredentials(creds, newAgg);
-		});
-}
+export const redisKeyring = new RedisKeyring(client);

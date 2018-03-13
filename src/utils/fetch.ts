@@ -1,12 +1,14 @@
 import defaultFetch, {Request, RequestInit, Response, Body} from 'node-fetch';
 import * as decorate from 'fetch-cookie/node-fetch';
+import {CookieJar} from 'tough-cookie';
 import {Observable} from 'rxjs';
 
-type Fetch = (url: string|Request, init?: RequestInit) => Observable<Response>;
+export type Fetch = (url: string|Request, init?: RequestInit) => Observable<Response>;
 
 export function fetchFactory(): Fetch {
-	let decorated = (decorate as <T>(t: T) => T)(defaultFetch);
-	return (url, init?) => Observable.fromPromise(decorated(url, init));
+	let jar = new CookieJar(undefined, {looseMode: true});
+	let decorated = (decorate as <T>(t: T, j: CookieJar) => T)(defaultFetch, jar);
+	return (url, init?) => Observable.fromPromise(init != null ? decorated(url, init) : decorated(url, {}));
 }
 
 const fetch = fetchFactory();
