@@ -10,9 +10,9 @@ import * as FormData from "form-data";
 
 import {UsernamePasswordCredentials} from "./credentials";
 import {Fetch, asText} from "../utils/fetch";
-import {splitLen} from "../utils/utils";
+import {getLowerClass, splitLen} from "../utils/utils";
 import {AlumniProvider, Alumni, FullAlumni, Query, Field, Sex} from "./api";
-import {getLowerClass, getUpperClass} from "./utils";
+import {getUpperClass} from "../utils/utils";
 
 const SOURCE = 'cc';
 const BATCH_SIZE = 50;

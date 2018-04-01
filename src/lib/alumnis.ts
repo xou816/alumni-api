@@ -5,9 +5,9 @@ import {stringify} from "querystring";
 
 import {UsernamePasswordCredentials} from "./credentials";
 import {Fetch, asText} from "../utils/fetch";
-import {trimInner, flatten} from "../utils/utils";
+import {trimInner, flatten, getLowerClass} from "../utils/utils";
 import {AlumniProvider, Alumni, FullAlumni, Query, Field, Sex} from "./api";
-import {getLowerClass, getUpperClass} from "./utils";
+import {getUpperClass} from "../utils/utils";
 
 const SOURCE = 'alumnis';
 const FIRST_PAGE = 'https://annuaire.centraliens-nantes.net';
@@ -49,7 +49,7 @@ const queryMapper: {[k: string]: string} = {
 	classLower: 'promotion_debut',
 	classUpper: 'promotion_fin',
 	[Field.COMPANY]: 'entreprise_nom'
-}
+};
 
 function buildQuery(query: Query, page: number): string {
 	let fixedQuery: {[k:string]: string|undefined} = {
@@ -95,14 +95,14 @@ function parseAlumni(doc: HTMLDocument, alumni: Alumni): FullAlumni {
 		.map(e => e.text())
 		.map(t => SEX_REGEX.exec(t))
 		.filter(r => r != null)
-		.map(r => r[1] as Sex);
+		.map(r => r![1] as Sex);
 	let identity = doc.find('//div[@class="typography"]//td')
 		.map(td => td.text())
 		.map(trimInner);
 	let diplomas = doc.find('//div[@class="typography"]//fieldset[2]//li')
 		.map(li => li.text());
 	let coords = doc.find('//div[@id="coords"]/div');
-	let nthCoord = i => coords[i].find('.//dd').map(dd => dd.text().trim());
+	let nthCoord = (i: number) => coords[i].find('.//dd').map(dd => dd.text().trim());
 	let jobs = doc.find('//div[@class="typography"]//fieldset[4]/ul/li')
 		.map(parseJob);
 	let class_ = diplomas.map(d => DIPLOMA_REGEX.exec(d))

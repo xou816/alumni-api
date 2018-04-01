@@ -1,6 +1,6 @@
 import {Observable} from "rxjs";
-import {AlumniProvider, Alumni, Field, Query} from "./api";
-import {UsernamePasswordCredentials, Keyring, AggregatedCredentials} from "./credentials";
+import {Alumni, AlumniProvider, Field, Query} from "./api";
+import {Keyring, UsernamePasswordCredentials} from "./credentials";
 
 export class AggregatedAlumniProvider implements AlumniProvider<UsernamePasswordCredentials> {
 
@@ -14,7 +14,7 @@ export class AggregatedAlumniProvider implements AlumniProvider<UsernamePassword
 
 	protected providerFor(source: string): AlumniProvider<any> {
 		let provider = this.providers
-			.filter(p => p.source() === source).shift();
+			.find(p => p.source() === source);
 		if (provider == null) throw new Error('No known provider for this alumni!');
 		return provider;
 	}
@@ -49,11 +49,3 @@ export class AggregatedAlumniProvider implements AlumniProvider<UsernamePassword
 
 }
 
-export function getLowerClass(class_: string): string {
-	return class_.split('-')[0];
-}
-
-export function getUpperClass(class_: string): string {
-	let s = class_.split('-');
-	return s[s.length - 1];
-}

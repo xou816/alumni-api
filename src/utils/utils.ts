@@ -15,3 +15,12 @@ export function trimInner(str: string) {
 		.filter(s => s.length > 0)
 		.join(' ');
 }
+
+export function getLowerClass(class_: string): string {
+    return class_.split('-')[0];
+}
+
+export function getUpperClass(class_: string): string {
+    let s = class_.split('-');
+    return s[s.length - 1];
+}

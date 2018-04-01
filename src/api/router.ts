@@ -4,7 +4,7 @@ import {Observable} from "rxjs";
 import CentraleCarrieres from "../lib/centrale-carrieres";
 import Alumnis from "../lib/alumnis";
 import {AlumniProvider, Field} from "../lib/api";
-import {AggregatedAlumniProvider} from "../lib/utils";
+import {AggregatedAlumniProvider} from "../lib/aggregated";
 import {Fetch, fetchFactory} from "../utils/fetch";
 import {UsernamePasswordCredentials} from "../lib/credentials";
 import {redisKeyring} from "./auth";
