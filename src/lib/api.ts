@@ -15,6 +15,7 @@ export enum Field {
 }
 
 export type Query = Partial<{
+	[Field.SOURCE]: string,
 	[Field.CLASS]: string,
 	[Field.FIRST_NAME]: string,
 	[Field.LAST_NAME]: string,
@@ -23,8 +24,7 @@ export type Query = Partial<{
 
 export type Meta = {
 	[Field.ID]: string|number|null,
-	[Field.SOURCE]: string,
-	[Field.URL]: string
+	[Field.SOURCE]: string
 }
 
 export type Sex = "M." | "Mme" | "Mlle" | "?";
@@ -39,13 +39,13 @@ export type Details = {
 	[Field.PHONE]: string[] 
 }
 
-export type Alumni = Meta & Partial<Details>;
-export type FullAlumni = Meta & Details;
+export type Alumni = Meta &	{[Field.URL]: string} & Partial<Details>;
+export type FullAlumni = Meta &	{[Field.URL]: string} & Details;
 
 export interface AlumniProvider<C, E = {}> {
 	source(): string;
 	login(credentials: C): Observable<boolean>;
 	logout(): Observable<boolean>;
 	search(query: Query): Observable<Alumni>;
-	getDetails(alumni: Alumni): Observable<FullAlumni & E>;
+	getDetails(meta: Meta): Observable<FullAlumni & E>;
 }

@@ -1,5 +1,5 @@
 import {Observable} from "rxjs";
-import {Alumni, AlumniProvider, Field, Query} from "./api";
+import {Alumni, AlumniProvider, Field, Query, Meta} from "./api";
 import {Keyring, UsernamePasswordCredentials} from "./credentials";
 
 export class AggregatedAlumniProvider implements AlumniProvider<UsernamePasswordCredentials> {
@@ -42,9 +42,9 @@ export class AggregatedAlumniProvider implements AlumniProvider<UsernamePassword
 		return Observable.merge(...this.providers.map(p => p.search(query)));
 	}
 
-	getDetails(alumni: Alumni) {
-		let provider = this.providerFor(alumni[Field.SOURCE]);
-		return provider.getDetails(alumni);
+	getDetails(meta: Meta) {
+		let provider = this.providerFor(meta[Field.SOURCE]);
+		return provider.getDetails(meta);
 	}
 
 }

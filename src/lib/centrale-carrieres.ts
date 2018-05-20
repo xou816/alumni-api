@@ -11,7 +11,7 @@ import * as FormData from "form-data";
 import {UsernamePasswordCredentials} from "./credentials";
 import {Fetch, asText} from "../utils/fetch";
 import {getLowerClass, splitLen} from "../utils/utils";
-import {AlumniProvider, Alumni, FullAlumni, Query, Field, Sex} from "./api";
+import {AlumniProvider, Alumni, FullAlumni, Query, Field, Sex, Meta} from "./api";
 import {getUpperClass} from "../utils/utils";
 
 const SOURCE = 'cc';
@@ -197,7 +197,8 @@ export default class CentraleCarrieres implements AlumniProvider<UsernamePasswor
 		return this.searchPaged(query, 0);
 	}
 
-	getDetails(alumni: Alumni) {
+	getDetails(meta: Meta) {
+		let alumni = {...meta, [Field.URL]: DETAILS_REQ + '?id=' + meta.id};
 		return this.fetch(alumni[Field.URL])
 			.flatMap(asText)
 			.map(parseHtmlString)
