@@ -9,7 +9,10 @@ import {schema, resolver as rootValue, context} from "./graphql";
 import {redisKeyring} from './auth';
 
 passport.use(new BasicStrategy((username, password, done) => {
-	return done(null, {username, password});
+	let openKeyring = redisKeyring.getCredentials({username, password}).toPromise();
+	return openKeyring
+		.then(_ => done(null, {username, password}))
+		.catch(_ => done(null, false));
 }));
 
 let app = express();

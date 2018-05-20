@@ -53,6 +53,7 @@ export const schema = buildSchema(`
 			${Field.CLASS}: String,
 			${Field.COMPANY}: String
 		): Page
+		source: [String]
 	}
 `);
 
@@ -75,7 +76,7 @@ export const context = (request: Request & {user: any}) => {
 
 type Result = Promise<{
 	edges: Array<{node: Alumni, cursor: string}>,
-	cursor: string
+	cursor: string|null
 }>;
 
 function toResult(search: Search<Alumni>, count: number): Result {
@@ -88,7 +89,7 @@ function toResult(search: Search<Alumni>, count: number): Result {
 		.toArray()
 		.map(edges => ({
 			edges,
-			cursor: edges[edges.length - 1].cursor
+			cursor: edges.length ? edges[edges.length - 1].cursor : null
 		}))
 		.toPromise();
 }
@@ -114,7 +115,15 @@ function searchResolver(query: Query & {count: number, cursor: string}, {getCred
 		query.count || 10);
 }
 
+function sourceResolve(args: any, {request}: {request: Request & {user: any}}) {
+	return redisKeyring
+		.getCredentials(request.user)
+		.map(Object.keys)
+		.toPromise();
+}
+
 export const resolver = {
 	alumni: alumniResolver,
-	search: searchResolver
+	search: searchResolver,
+	source: sourceResolve
 };
