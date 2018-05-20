@@ -9,11 +9,17 @@ curl -u toto:password -H "Content-Type: application/json" -X POST -d '{"username
 Then, with GraphQL:
 
 ```
-query  {
-  search(class: "2019", source: "alumnis") {
-		id
-		last_name
-		first_name
+{
+  search(class: "2019") {
+    edges {
+      node {
+        id
+        first_name
+        last_name
+        source
+      }
+    }
+    cursor
   }
 }
 ```

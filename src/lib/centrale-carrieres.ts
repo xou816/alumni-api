@@ -11,7 +11,7 @@ import * as FormData from "form-data";
 import {UsernamePasswordCredentials} from "./credentials";
 import {Fetch, asText} from "../utils/fetch";
 import {getLowerClass, splitLen} from "../utils/utils";
-import {AlumniProvider, Alumni, FullAlumni, Query, Field, Sex, Meta} from "./api";
+import {AlumniProvider, Search, Alumni, FullAlumni, Query, Field, Sex, Meta} from "./api";
 import {getUpperClass} from "../utils/utils";
 
 const SOURCE = 'cc';
@@ -154,20 +154,28 @@ function formatCoords(coords: string[][], alumni: Alumni): FullAlumni {
 	};
 };
 
-export default class CentraleCarrieres implements AlumniProvider<UsernamePasswordCredentials> {
+type Cursor = {
+	start: number,
+	skip?: number,
+	last?: number
+};
+
+export default class CentraleCarrieres implements AlumniProvider<UsernamePasswordCredentials, {}, Cursor> {
 
 	private fetch: Fetch;
 
-	private searchPaged(query: Query, start: number, last?: number): Observable<Alumni> {
+	private searchPaged(query: Query, cursor: Cursor): Search<Alumni> {
 		let form = queryForm(query);
-		return this.fetch(SEARCH_REQ + '?start=' + start, { method: 'POST', body: form, headers: form.getHeaders() })
+		return this.fetch(SEARCH_REQ + '?start=' + cursor.start, { method: 'POST', body: form, headers: form.getHeaders() })
 			.flatMap(asText)
 			.map(parseHtmlString)
 			.flatMap(doc => {
-				last = last == null ? getLastOffset(doc) : last;
-				let next = start + BATCH_SIZE;
+				let last = cursor.last || getLastOffset(doc);
+				let next = cursor.start + BATCH_SIZE;
 				return Observable.from(getAlumnis(doc))
-					.concat(next <= last ? this.searchPaged(query, next, last) : Observable.from([]));
+					.skip(cursor.skip || 0)
+					.map((alumni, skip) => ({ node: alumni, cursor: {...cursor, skip, last} }))
+					.concat(next <= last ? this.searchPaged(query, {...cursor, start: next, skip: 0, last}) : Observable.from([]));
 			});
 	}
 
@@ -193,8 +201,17 @@ export default class CentraleCarrieres implements AlumniProvider<UsernamePasswor
 		return this.fetch(LOGOUT_REQ).map(_ => true);
 	}
 
-	search(query: Query) {
-		return this.searchPaged(query, 0);
+	search(query: Query, cursor: Cursor|null) {
+		let next: Cursor;
+		if (cursor === null) {
+			next = {start: 0};
+		} else {
+			let {start, skip, last} = {skip: 0, ...cursor};
+			next = skip + 1 === BATCH_SIZE ?
+				{start: start + BATCH_SIZE, skip: 0, last} :
+				{start, skip: skip + 1, last};
+		}
+		return this.searchPaged(query, next);
 	}
 
 	getDetails(meta: Meta) {

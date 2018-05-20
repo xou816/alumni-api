@@ -2,7 +2,11 @@ import {Observable} from "rxjs";
 import {Alumni, AlumniProvider, Field, Query, Meta} from "./api";
 import {Keyring, UsernamePasswordCredentials} from "./credentials";
 
-export class AggregatedAlumniProvider implements AlumniProvider<UsernamePasswordCredentials> {
+type Cursor = {
+	[k: string]: any
+};
+
+export class AggregatedAlumniProvider implements AlumniProvider<UsernamePasswordCredentials, {}, Cursor> {
 
 	protected providers: AlumniProvider<any>[];
 	protected keyring: Keyring<UsernamePasswordCredentials>;
@@ -38,8 +42,14 @@ export class AggregatedAlumniProvider implements AlumniProvider<UsernamePassword
 			.reduce((acc, cur) => acc.flatMap(v1 => cur.map(v2 => v1 && v2)), Observable.of(true));
 	}
 
-	search(query: Query) {
-		return Observable.merge(...this.providers.map(p => p.search(query)));
+	search(query: Query, cursor: Cursor|null) {
+		return Observable.merge(...this.providers.map(p => {
+				let source = p.source();
+				let sourceCursor = cursor !== null ? cursor[source] : null;
+				return p.search(query, sourceCursor)
+					.map(n => ({...n, cursor: {[source]: n.cursor} }));
+			}))
+			.scan(({cursor}, cur) => ({ ...cur, cursor: {...cursor, ...cur.cursor} }));
 	}
 
 	getDetails(meta: Meta) {

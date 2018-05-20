@@ -42,10 +42,13 @@ export type Details = {
 export type Alumni = Meta &	{[Field.URL]: string} & Partial<Details>;
 export type FullAlumni = Meta &	{[Field.URL]: string} & Details;
 
-export interface AlumniProvider<C, E = {}> {
+export type Node<R, N = any> = {node: R, cursor: N|null};
+export type Search<R, N = any> = Observable<Node<R, N>>;
+
+export interface AlumniProvider<C, E = {}, N = any> {
 	source(): string;
 	login(credentials: C): Observable<boolean>;
 	logout(): Observable<boolean>;
-	search(query: Query): Observable<Alumni>;
+	search(query: Query, cursor: N|null): Search<Alumni>;
 	getDetails(meta: Meta): Observable<FullAlumni & E>;
 }

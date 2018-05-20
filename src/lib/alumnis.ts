@@ -6,9 +6,10 @@ import {stringify} from "querystring";
 import {UsernamePasswordCredentials} from "./credentials";
 import {Fetch, asText} from "../utils/fetch";
 import {trimInner, flatten, getLowerClass} from "../utils/utils";
-import {AlumniProvider, Alumni, FullAlumni, Query, Field, Sex, Meta} from "./api";
+import {AlumniProvider, Search, Alumni, FullAlumni, Query, Field, Sex, Meta} from "./api";
 import {getUpperClass} from "../utils/utils";
 
+const BATCH_SIZE = 20;
 const SOURCE = 'alumnis';
 const FIRST_PAGE = 'https://annuaire.centraliens-nantes.net';
 const LOGIN_REQ = 'https://annuaire.centraliens-nantes.net/index.php/login';
@@ -44,8 +45,8 @@ function getLastPage(doc: HTMLDocument): number {
 }
 
 const queryMapper: {[k: string]: string} = {
-	[Field.FIRST_NAME]: 'individu_nom',
-	[Field.LAST_NAME]: 'individu_prenom',
+	[Field.FIRST_NAME]: 'individu_prenom',
+	[Field.LAST_NAME]: 'individu_nom',
 	classLower: 'promotion_debut',
 	classUpper: 'promotion_fin',
 	[Field.COMPANY]: 'entreprise_nom'
@@ -121,19 +122,27 @@ function parseAlumni(doc: HTMLDocument, alumni: Alumni): FullAlumni {
 	};
 }
 
-export default class Alumnis implements AlumniProvider<UsernamePasswordCredentials> {
+type Cursor = {
+	page: number,
+	skip?: number 
+	last?: number
+};
+
+export default class Alumnis implements AlumniProvider<UsernamePasswordCredentials, {}, Cursor> {
 
 	private fetch: Fetch;
 
-	private searchPaged(query: Query, page: number, last?: number): Observable<Alumni> {
-		return this.fetch(buildQuery(query, page))
+	private searchPaged(query: Query, cursor: Cursor): Search<Alumni> {
+		return this.fetch(buildQuery(query, cursor.page))
 			.flatMap(asText)
 			.map(parseHtmlString)
 			.flatMap(doc => {
-				last = last == null ? getLastPage(doc) : last;
-				let next = page + 1;
+				let last = cursor.last || getLastPage(doc);
+				let next = cursor.page + 1;
 				return Observable.from(getAlumnis(doc))
-					.concat(next <= last ? this.searchPaged(query, next, last) : Observable.from([]));
+					.skip(cursor.skip || 0)
+					.map((alumni, skip) => ({ node: alumni, cursor: {...cursor, last, skip} }))
+					.concat(next <= last ? this.searchPaged(query, {...cursor, last, page: next, skip: 0}) : Observable.from([]));
 			});
 	}
 
@@ -165,8 +174,17 @@ export default class Alumnis implements AlumniProvider<UsernamePasswordCredentia
 		return this.fetch(LOGOUT_REQ).map(_ => true);
 	}
 
-	search(query: Query) {
-		return this.searchPaged(query, 1);
+	search(query: Query, cursor: Cursor|null) {
+		let next: Cursor;
+		if (cursor === null) {
+			next = {page: 1};
+		} else {
+			let {page, skip, last} = {skip: 0, ...cursor};
+			next = skip + 1 === BATCH_SIZE ?
+				{page: page + 1, skip: 0, last} :
+				{page, skip: skip + 1, last};
+		}
+		return this.searchPaged(query, next);
 	}
 
 	getDetails(meta: Meta) {
