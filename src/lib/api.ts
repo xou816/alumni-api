@@ -27,7 +27,7 @@ export type Meta = {
 	[Field.SOURCE]: string
 }
 
-export type Sex = "M." | "Mme" | "Mlle" | "?";
+export type Sex = "M." | "Mme" | "?";
 export type Details = {
 	[Field.SEX]: Sex,
 	[Field.FIRST_NAME]: string,

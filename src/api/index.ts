@@ -2,7 +2,6 @@ import * as express from "express";
 import {Request} from "express";
 import * as bodyParser from 'body-parser';
 import * as graphqlHttp from 'express-graphql';
-import router from "./router";
 import * as passport from 'passport';
 import {BasicStrategy} from 'passport-http';
 

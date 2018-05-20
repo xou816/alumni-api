@@ -57,7 +57,11 @@ export class RedisKeyring implements Keyring<UsernamePasswordCredentials> {
 				} else {
 					if (reply != null) {
 						let decrypted = this.decryptReply(reply, master.password);
-						observer.next(source == null ? decrypted : decrypted[source]);
+						if (decrypted === null) {
+							observer.error('wrong password');
+						} else {
+							observer.next(source == null ? decrypted : decrypted[source]);
+						}
 					} else {
 						observer.next({});
 					}

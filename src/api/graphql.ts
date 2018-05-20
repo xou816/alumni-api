@@ -18,18 +18,11 @@ const SOURCES: {[k: string]: (f: Fetch) => AlumniProvider<any>} = {
 };
 
 export const schema = buildSchema(`
-	enum Sex {
-		M,
-		MME,
-		MLLE,
-		UNSPEC
-	}
-
 	type Alumni {
 		${Field.ID}: ID!
 		${Field.SOURCE}: String!
 		${Field.URL}: String
-		${Field.SEX}: Sex
+		${Field.SEX}: String
 		${Field.FIRST_NAME}: String
 		${Field.LAST_NAME}: String
 		${Field.CLASS}: Int
@@ -42,11 +35,11 @@ export const schema = buildSchema(`
 	type Query {
 		alumni(${Field.SOURCE}: String, ${Field.ID}: ID!): Alumni
 		search(
-			${Field.SOURCE}: [String!],
+			${Field.SOURCE}: String,
 			${Field.FIRST_NAME}: String,
 			${Field.LAST_NAME}: String,
 			${Field.CLASS}: String,
-			${Field.COMPANY}: [String]
+			${Field.COMPANY}: String
 		): [Alumni]
 	}
 `);
@@ -82,11 +75,8 @@ export const resolver = {
 function credentialsForSource<C>(source: typeof ALL, master: C): Observable<C>;
 function credentialsForSource<C>(source: string, master: C): Observable<any>;
 function credentialsForSource(source: string, master: UsernamePasswordCredentials): Observable<UsernamePasswordCredentials|any> {
-	if (source === ALL) {
-		return Observable.of(master);
-	} else {
-		return redisKeyring.getCredentials(master, source);
-	}
+	return (source === ALL ? Observable.of(master) : redisKeyring.getCredentials(master, source))
+		.filter(c => !(Object.keys(c).length === 0 && c.constructor === Object));
 }
 
 export const context = (request: Request & {user: any}) => {
@@ -94,8 +84,5 @@ export const context = (request: Request & {user: any}) => {
 	return {
 		request,
 		getCredentials: (source: string) => credentialsForSource(source, credentials)
-			.flatMap(credentials => credentials == null ? 
-				Observable.throw('Invalid credentials') :
-				Observable.of(credentials))
 	};
 };
