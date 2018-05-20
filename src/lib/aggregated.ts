@@ -45,7 +45,7 @@ export class AggregatedAlumniProvider implements AlumniProvider<UsernamePassword
 	search(query: Query, cursor: Cursor|null) {
 		return Observable.merge(...this.providers.map(p => {
 				let source = p.source();
-				let sourceCursor = cursor !== null ? cursor[source] : null;
+				let sourceCursor = cursor !== null ? cursor[source] || null : null;
 				return p.search(query, sourceCursor)
 					.map(n => ({...n, cursor: {[source]: n.cursor} }));
 			}))

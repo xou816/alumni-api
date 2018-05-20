@@ -1,6 +1,8 @@
 import {graphql, buildSchema} from 'graphql';
 import {Observable} from "rxjs";
 import {Request} from 'express';
+import {join} from 'path';
+import {readFileSync} from 'fs';
 
 import {Field, Meta, AlumniProvider, Query, Alumni, Node, Search} from '../lib/api';
 import CentraleCarrieres from "../lib/centrale-carrieres";
@@ -17,45 +19,7 @@ const SOURCES: {[k: string]: (f: Fetch) => AlumniProvider<any>} = {
 	[ALL]: f => new AggregatedAlumniProvider([new Alumnis(f), new CentraleCarrieres(f)], redisKeyring)
 };
 
-export const schema = buildSchema(`
-	type Alumni {
-		${Field.ID}: ID!
-		${Field.SOURCE}: String!
-		${Field.URL}: String
-		${Field.SEX}: String
-		${Field.FIRST_NAME}: String
-		${Field.LAST_NAME}: String
-		${Field.CLASS}: Int
-		${Field.COMPANY}: [String]
-		${Field.SCHOOL}: String
-		${Field.EMAIL}: [String]
-		${Field.PHONE}: [String] 
-	}
-
-	type Edges {
-		node: Alumni
-		cursor: String
-	}
-
-	type Page {
-		edges: [Edges]
-		cursor: String
-	}
-
-	type Query {
-		alumni(${Field.SOURCE}: String, ${Field.ID}: ID!): Alumni
-		search(
-			count: Int,
-			cursor: String,
-			${Field.SOURCE}: String,
-			${Field.FIRST_NAME}: String,
-			${Field.LAST_NAME}: String,
-			${Field.CLASS}: String,
-			${Field.COMPANY}: String
-		): Page
-		source: [String]
-	}
-`);
+export const schema = buildSchema(readFileSync(join(__dirname, '../../schema.graphql')).toString());
 
 type GetCredentials = (source: string) => Observable<any>;
 
@@ -104,15 +68,15 @@ function alumniResolver(meta: Meta, {getCredentials}: {getCredentials: GetCreden
 		.toPromise();
 }
 
-function searchResolver(query: Query & {count: number, cursor: string}, {getCredentials}: {getCredentials: GetCredentials}): Result {
+function searchResolver(query: Query & {first: number, after: string}, {getCredentials}: {getCredentials: GetCredentials}): Result {
 	let source = query[Field.SOURCE] || ALL;
 	let provider = SOURCES[source](fetchFactory());
-	let cursor = query.cursor == null ? null : 
-		JSON.parse(Buffer.from(query.cursor, 'base64').toString());
+	let cursor = query.after == null ? null : 
+		JSON.parse(Buffer.from(query.after, 'base64').toString());
 	return toResult(getCredentials(source)
 		.flatMap(credentials => provider.login(credentials))
 		.flatMap(_ => provider.search(query, cursor)), 
-		query.count || 10);
+		query.first || 10);
 }
 
 function sourceResolve(args: any, {request}: {request: Request & {user: any}}) {
