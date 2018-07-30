@@ -22,6 +22,10 @@ type Page {
 	cursor: String
 }
 
+type Source {
+	name: String
+}
+
 type Query {
 	alumni(source: String, id: ID!): Alumni
 	search(
@@ -34,4 +38,13 @@ type Query {
 		company: String
 	): Page
 	source: [String]
+}
+
+input Credentials {
+	username: String
+	password: String
+}
+
+type Mutation {
+	addSource(source: String, credentials: Credentials): [String]
 }

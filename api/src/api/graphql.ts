@@ -19,7 +19,7 @@ const SOURCES: {[k: string]: (f: Fetch) => AlumniProvider<any>} = {
 	[ALL]: f => new AggregatedAlumniProvider([new Alumnis(f), new CentraleCarrieres(f)], redisKeyring)
 };
 
-export const schema = buildSchema(readFileSync(join(__dirname, '../../schema.graphql')).toString());
+export const schema = buildSchema(readFileSync(join(__dirname, '../../../schema.graphql')).toString());
 
 type GetCredentials = (source: string) => Observable<any>;
 
@@ -86,8 +86,16 @@ function sourceResolve(args: any, {request}: {request: Request & {user: any}}) {
 		.toPromise();
 }
 
+function addSourceResolver(args: {source: string, credentials: UsernamePasswordCredentials}, {request}: {request: Request & {user: any}}) {
+	return redisKeyring.updateCredentials(request.user as any, args.source, args.credentials)
+		.flatMap(bool => redisKeyring.getCredentials(request.user))
+		.map(Object.keys)
+		.toPromise();
+}
+
 export const resolver = {
 	alumni: alumniResolver,
 	search: searchResolver,
-	source: sourceResolve
+	source: sourceResolve,
+	addSource: addSourceResolver
 };
