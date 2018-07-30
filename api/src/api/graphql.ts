@@ -8,6 +8,7 @@ import {Field, Meta, AlumniProvider, Query, Alumni, Node, Search} from '../lib/a
 import CentraleCarrieres from "../lib/centrale-carrieres";
 import Alumnis from "../lib/alumnis";
 import {AggregatedAlumniProvider} from "../lib/aggregated";
+import {MockAlumniProvider} from "../lib/mock";
 import {Fetch, fetchFactory} from "../utils/fetch";
 import {UsernamePasswordCredentials} from "../lib/credentials";
 import {redisKeyring} from "./auth";
@@ -16,6 +17,7 @@ const ALL = 'all';
 const SOURCES: {[k: string]: (f: Fetch) => AlumniProvider<any>} = {
 	alumnis: f => new Alumnis(f),
 	cc: f => new CentraleCarrieres(f),
+	mock: f => new MockAlumniProvider(),
 	[ALL]: f => new AggregatedAlumniProvider([new Alumnis(f), new CentraleCarrieres(f)], redisKeyring)
 };
 

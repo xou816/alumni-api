@@ -10,9 +10,12 @@ import Avatar from '@material-ui/core/Avatar';
 import { QueryRenderer, graphql } from 'react-relay';
 import environment from '../environment';
 import CircularProgress from '@material-ui/core/CircularProgress';
+import Slide from '@material-ui/core/Slide';
 
 const styles = theme => ({
-  
+  center: {
+    textAlign: 'center'
+  }
 });
 
 @withStyles(styles)
@@ -20,21 +23,19 @@ export default class Results extends React.Component {
 
  	render() {
   		let {classes, query} = this.props;
-      let results = [
-        {name: 'Patrick', class_: 96},
-        {name: 'Bob', class_: 89}
-      ];
-      console.log(query)
     	return (
         <QueryRenderer 
           environment={environment}
           query={graphql`
-            query ResultsQuery($class: String) {
-              search(class: $class, company: $company) {
+            query ResultsQuery($first_name: String, $last_name: String, $class: String, $company: String) {
+              search(source: "mock", class: $class, company: $company, first_name: $first_name, last_name: $last_name) {
                 edges {
                   node {
+                    id
+                    source
                     first_name
                     last_name
+                    class
                   }
                 }
               }
@@ -42,24 +43,26 @@ export default class Results extends React.Component {
             `}
           variables={query}
           render={({error, props}) => props && props.search ? props.search.edges.map(edge => (
+            <Slide direction="up" in>
     	    	<ExpansionPanel>
     			    <ExpansionPanelSummary>
                 <div>
                 <Typography variant="title" gutterBottom>
-                  {edge.node.first_name}
+                  {edge.node.first_name} {edge.node.last_name}
                 </Typography>
                 <Typography variant="subheading" gutterBottom>
-                  Class of 99
+                  Class of {edge.node['class']}
                 </Typography>
                 </div>
     			    </ExpansionPanelSummary>
     			    <ExpansionPanelDetails>
                 <Typography>
-                  Some details
+                  Reference: {edge.node.id}@{edge.node.source}
                 </Typography>
     			    </ExpansionPanelDetails>
     			  </ExpansionPanel>
-        )) : <CircularProgress />}>
+            </Slide>
+        )) : <div className={classes.center}><CircularProgress /></div>}>
         </QueryRenderer>
     	);
   	}
