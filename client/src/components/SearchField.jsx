@@ -6,6 +6,13 @@ import ExpansionPanelSummary from '@material-ui/core/ExpansionPanelSummary';
 import ExpansionPanelDetails from '@material-ui/core/ExpansionPanelDetails';
 import TextField from '@material-ui/core/TextField';
 
+const availableFields = [
+  {raw: 'first_name', pretty: 'First name'},
+  {raw: 'last_name', pretty: 'Last name'},
+  {raw: 'class', pretty: 'Class'},
+  {raw: 'company', pretty: 'Company'}
+]
+
 const styles = theme => ({
   panel: {
   	background: 'rgba(255, 255, 255, 0.1)',
@@ -30,28 +37,50 @@ const styles = theme => ({
 export default class SearchField extends React.Component {
 
   state = {
-    expanded: true
+    expanded: true,
+    fields: []
   }
 
   onChange = (event, expanded) => {
     this.setState({expanded});
   }
 
+  onKeyPress = name => event => {
+    if (event.key === 'Enter') {
+      let value = event.target.value;
+      let newFields = this.state.fields.concat({name, value});
+      this.setState({
+        fields: newFields
+      })
+      this.props.onSearchChanged(newFields)
+    }
+  }
+
+  fieldsUsed = () => this.state.fields
+    .map(({name}) => name)
+
+  fieldsLeft = () => availableFields
+    .filter(({raw}) => this.fieldsUsed().indexOf(raw) === -1)
+
  	render() {
   		let {classes} = this.props;
-      let {expanded} = this.state;
+      let {expanded, fields} = this.state;
     	return (
 	    	<ExpansionPanel classes={{root: classes.panel, expanded: classes.panelExpanded}} 
                         elevation={expanded ? 2 : 0} 
                         onChange={this.onChange}>
 			    <ExpansionPanelSummary classes={{root: classes.summary}}>
-			      <div>
-			        <Chip className={classes.chip} label="name:Patrick" onDelete={() => {}} />
-	    			  <Chip className={classes.chip} label="class:2019" onDelete={() => {}} />
-	    			</div>
+			      <div>{
+              fields.map(({name, value}) => (
+			          <Chip key={name} className={classes.chip} label={`${name}:${value}`} onDelete={() => {}} />
+              ))
+            }</div>
 			    </ExpansionPanelSummary>
 			    <ExpansionPanelDetails>
-			      <TextField label="Name" variant="outlined" />
+          {this.fieldsLeft().map(({raw, pretty}) => (
+            <TextField key={raw} onKeyPress={this.onKeyPress(raw)} label={pretty} variant="outlined" margin="normal" />
+            ))
+          }
 			    </ExpansionPanelDetails>
 			  </ExpansionPanel>
     	);

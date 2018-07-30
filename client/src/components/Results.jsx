@@ -7,6 +7,9 @@ import ExpansionPanelDetails from '@material-ui/core/ExpansionPanelDetails';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import Avatar from '@material-ui/core/Avatar';
+import { QueryRenderer, graphql } from 'react-relay';
+import environment from '../environment';
+import CircularProgress from '@material-ui/core/CircularProgress';
 
 const styles = theme => ({
   
@@ -15,24 +18,38 @@ const styles = theme => ({
 @withStyles(styles)
 export default class Results extends React.Component {
 
-
  	render() {
-  		let {classes} = this.props;
+  		let {classes, query} = this.props;
       let results = [
         {name: 'Patrick', class_: 96},
         {name: 'Bob', class_: 89}
       ];
+      console.log(query)
     	return (
-        <React.Fragment>
-        {results.map(({name, class_}) => (
+        <QueryRenderer 
+          environment={environment}
+          query={graphql`
+            query ResultsQuery($class: String) {
+              search(class: $class, company: $company) {
+                edges {
+                  node {
+                    first_name
+                    last_name
+                  }
+                }
+              }
+            }
+            `}
+          variables={query}
+          render={({error, props}) => props && props.search ? props.search.edges.map(edge => (
     	    	<ExpansionPanel>
     			    <ExpansionPanelSummary>
                 <div>
                 <Typography variant="title" gutterBottom>
-                  {name}
+                  {edge.node.first_name}
                 </Typography>
                 <Typography variant="subheading" gutterBottom>
-                  Class of {class_}
+                  Class of 99
                 </Typography>
                 </div>
     			    </ExpansionPanelSummary>
@@ -42,8 +59,8 @@ export default class Results extends React.Component {
                 </Typography>
     			    </ExpansionPanelDetails>
     			  </ExpansionPanel>
-        ))}
-        </React.Fragment>
+        )) : <CircularProgress />}>
+        </QueryRenderer>
     	);
   	}
 }

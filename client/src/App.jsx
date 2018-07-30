@@ -12,7 +12,7 @@ const styles = theme => ({
   root: {
     padding: `${5 * theme.spacing.unit}px 25%`,
     background: theme.palette.grey[100],
-    height: '100vh'
+    height: '100%'
   },
   search: {
     ...theme.mixins.gutters(),
@@ -39,21 +39,34 @@ const styles = theme => ({
 @withStyles(styles)
 export default class App extends React.Component {
 
+	state = {
+		query: {}
+	}
+
+	onSearchChanged = search => {
+		let newQuery = search.reduce((acc, {name, value}) => ({
+			...acc, 
+			[name]: value
+		}), {})
+		this.setState({query: newQuery})
+	}
+
  	render() {
   		let {classes} = this.props;
+  		let {query} = this.state;
     	return (<React.Fragment><CssBaseline /><div className={classes.root}>
 	    	<Paper className={classes.search} elevation={0}>
 		    	<Typography className={classes.text} variant="headline" component="h3">
 		          	Find alumni
 		        </Typography>
-	    		<SearchField />
+	    		<SearchField onSearchChanged={this.onSearchChanged} />
 	    		<div className={classes.buttonContainer}>
 		    		<Button color="secondary" variant="extendedFab" className={classes.button}>
 		        		<SearchIcon /> Search
 		      		</Button>
 	      		</div>
 	    	</Paper>
-	    	<Results />
+	    	<Results query={query} />
     	</div></React.Fragment>);
   	}
 }
