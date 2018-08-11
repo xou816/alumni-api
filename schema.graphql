@@ -24,6 +24,7 @@ type Page {
 
 type Source {
 	name: String
+	enabled: Boolean
 }
 
 type Query {
@@ -37,7 +38,7 @@ type Query {
 		class: String,
 		company: String
 	): Page
-	source: [String]
+	source: [Source]
 }
 
 input Credentials {
@@ -46,5 +47,5 @@ input Credentials {
 }
 
 type Mutation {
-	addSource(source: String, credentials: Credentials): [String]
+	addSource(source: String, credentials: Credentials): [Source]
 }

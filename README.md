@@ -3,14 +3,19 @@ WIP!
 Example usage:
 
 ```
-curl -u toto:password -H "Content-Type: application/json" -X POST -d '{"username":"USER","password":"PASS"}' http://localhost:3000/auth/alumnis
+mutation {
+  addSource(source: "mock", credentials: {username: "user", password:"password"}) {
+    name
+    enabled
+  }
+}
 ```
 
-Then, with GraphQL:
+Then:
 
 ```
 {
-  search(class: "2019") {
+  search(source: "all", class: "2019") {
     edges {
       node {
         id

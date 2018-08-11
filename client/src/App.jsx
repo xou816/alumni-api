@@ -1,6 +1,6 @@
 import React from 'react';
 import { withStyles } from '@material-ui/core/styles';
-import SearchBar from './components/SearchBar';
+import SearchBarWithSources from './components/SearchBarWithSources';
 import Results from './components/Results';
 import CssBaseline from '@material-ui/core/CssBaseline';
 
@@ -17,20 +17,23 @@ const styles = theme => ({
 export default class App extends React.Component {
 
 	state = {
-		query: {}
+		query: {source: 'all'},
+		source: 0
 	}
 
-  onSearch = query => this.setState({query})
+  	onSearch = query => this.setState({query})
+
+  	onSourceSelect = source => this.setState({source})
 
  	render() {
   		let {classes} = this.props;
-  		let {query} = this.state;
+  		let {query, source} = this.state;
     	return (
         <React.Fragment>
           <CssBaseline />
           <div className={classes.root}>
-            <SearchBar onSearch={this.onSearch} />
-	    	    <Results query={query} />
+            <SearchBarWithSources selected={source} sources={[]} onSearch={this.onSearch} onSourceSelect={this.onSourceSelect} />
+	    	<Results query={query} />
           </div>
         </React.Fragment>
       );

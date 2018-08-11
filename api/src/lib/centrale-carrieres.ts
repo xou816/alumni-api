@@ -88,10 +88,13 @@ function queryForm(query: Query) {
 		[Field.FIRST_NAME]: '',
 		[Field.LAST_NAME]: '',
 		[Field.CLASS]: '',
-		[Field.COMPANY]: '',
-		...query
+		[Field.COMPANY]: ''
 	};
-
+	Object.keys(query).forEach(key => {
+		if (query[key] != null) {
+			updated[key] = query[key];
+		}
+	});
 	let form = new FormData();
 	form.append('prenom', updated[Field.FIRST_NAME]);
 	form.append('nom', updated[Field.LAST_NAME]);
