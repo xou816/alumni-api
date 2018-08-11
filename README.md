@@ -1,5 +1,7 @@
 WIP!
 
+![preview](preview.png)
+
 Example usage:
 
 ```
