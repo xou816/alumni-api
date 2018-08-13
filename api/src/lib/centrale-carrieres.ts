@@ -84,13 +84,13 @@ function getAlumnis(doc: HTMLDocument): Alumni[] {
 }
 
 function queryForm(query: Query) {
-	let updated = {
+	let updated: Query = {
 		[Field.FIRST_NAME]: '',
 		[Field.LAST_NAME]: '',
 		[Field.CLASS]: '',
 		[Field.COMPANY]: ''
 	};
-	Object.keys(query).forEach(key => {
+	(Object.keys(query) as Array<keyof Query>).forEach(key => {
 		if (query[key] != null) {
 			updated[key] = query[key];
 		}
@@ -104,8 +104,8 @@ function queryForm(query: Query) {
 	form.append('pro_fonction_desc', '');
 	form.append('pro_organisation', updated[Field.COMPANY]);
 	form.append('type', 1);
-	form.append('promo1', getLowerClass(updated[Field.CLASS]));
-	form.append('promo2', getUpperClass(updated[Field.CLASS]));
+	form.append('promo1', getLowerClass(updated[Field.CLASS] || ''));
+	form.append('promo2', getUpperClass(updated[Field.CLASS] || ''));
 	form.append('Rechercher', 'Rechercher');
 	return form;
 };

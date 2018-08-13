@@ -4,11 +4,15 @@ import { QueryRenderer, graphql } from 'react-relay';
 import environment from '../environment';
 import SearchBar from './SearchBar';
 import WarningMessage from './WarningMessage';
+import AddSourceDialog from './AddSourceDialog';
 import Fade from '@material-ui/core/Fade';
 
 const styles = theme => ({
   center: {
     textAlign: 'center'
+  },
+  button: {
+    color: theme.palette.primary.contrastText
   }
 });
 
@@ -36,12 +40,17 @@ export default class SearchBarWithSources extends React.Component {
                 selected={selected}
                 onSourceSelect={onSourceSelect} 
                 onSearch={query => {
-                  let source = props && props.source && selected > 0 ? props.source[selected-1].name : 'all'
-                   onSearch({...query, source })
+                  if (props && props.source) {
+                    onSearch({...query, source: props.source[selected].name })                  
+                  }
                 }} />
               {
-                props && props.source && selected > 0 && !props.source[selected-1].enabled ?
-                  <Fade in><WarningMessage>Source is not configured!</WarningMessage></Fade> :
+                props && props.source && !props.source[selected].enabled ?
+                  (<Fade in>
+                    <WarningMessage>
+                      Source is not configured! <AddSourceDialog source={props.source[selected].name} ButtonProps={{className: classes.button}} />
+                    </WarningMessage>
+                  </Fade>) :
                   null
               }
             </React.Fragment>

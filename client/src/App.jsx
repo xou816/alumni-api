@@ -17,7 +17,7 @@ const styles = theme => ({
 export default class App extends React.Component {
 
 	state = {
-		query: {source: 'all'},
+		query: null,
 		source: 0
 	}
 
@@ -33,7 +33,7 @@ export default class App extends React.Component {
           <CssBaseline />
           <div className={classes.root}>
             <SearchBarWithSources selected={source} sources={[]} onSearch={this.onSearch} onSourceSelect={this.onSourceSelect} />
-	    	<Results query={query} />
+	    	{query ? <Results query={query} /> : null}
           </div>
         </React.Fragment>
       );

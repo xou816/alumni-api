@@ -15,10 +15,10 @@ import {redisKeyring} from "./auth";
 
 const ALL = 'all';
 const SOURCES: {[k: string]: (f: Fetch) => AlumniProvider<any>} = {
+	[ALL]: f => new AggregatedAlumniProvider([new Alumnis(f), new CentraleCarrieres(f), new MockAlumniProvider()], redisKeyring),
 	alumnis: f => new Alumnis(f),
 	cc: f => new CentraleCarrieres(f),
-	mock: f => new MockAlumniProvider(),
-	[ALL]: f => new AggregatedAlumniProvider([new Alumnis(f), new CentraleCarrieres(f), new MockAlumniProvider()], redisKeyring)
+	mock: f => new MockAlumniProvider()
 };
 
 export const schema = buildSchema(readFileSync(join(__dirname, '../../../schema.graphql')).toString());
@@ -86,9 +86,9 @@ function sourceResolve(args: any, {request}: {request: Request & {user: any}}) {
 		.getCredentials(request.user)
 		.map(Object.keys)
 		.map(keys => Object.keys(SOURCES).reduce((acc: {name: string, enabled: boolean}[], key) => {
-			return key === ALL ? acc : acc.concat({
+			return acc.concat({
 				name: key,
-				enabled: keys.indexOf(key) > -1
+				enabled: key === ALL || keys.indexOf(key) > -1
 			})
 		}, []))
 		.toPromise();

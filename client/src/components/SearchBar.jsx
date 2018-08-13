@@ -9,13 +9,7 @@ import SearchField from './SearchField';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 import Badge from '@material-ui/core/Badge';
-
-const pretty = {
-  cc: 'Centrale Carrières',
-  alumnis: 'Centrale Nantes Alumnis',
-  mock: 'Bikini Bottom Alumnis',
-  all: '?'
-}
+import pretty from '../sources';
 
 const styles = theme => ({
   root: {
@@ -75,7 +69,6 @@ export default class SearchBar extends React.Component {
               value={selected} 
               scrollable
               TabIndicatorProps={{style: {top: 0, height: '5px'}}}>
-          <Tab label="All" />
           {sources.map(source => (
             <Tab key={source.name} label={
               source.enabled ?
