@@ -1,4 +1,19 @@
-type Alumni {
+"""An object with an ID"""
+interface Node {
+  """The id of the object."""
+  id: ID!
+}
+
+"""Information about pagination in a connection."""
+type PageInfo {
+  """When paginating forwards, are there more items?"""
+  hasNextPage: Boolean!
+  """When paginating forwards, the cursor to continue."""
+  endCursor: String
+}
+
+
+type Alumni implements Node {
 	id: ID!
 	source: String!
 	url: String
@@ -12,23 +27,24 @@ type Alumni {
 	phone: [String] 
 }
 
-type Edges {
+type Edge {
 	node: Alumni
 	cursor: String
 }
 
 type Page {
-	edges: [Edges]
-	cursor: String
+	edges: [Edge]
+	pageInfo: PageInfo!
 }
 
-type Source {
-	name: String
+type Source implements Node {
+	id: ID!
+	key: String
 	enabled: Boolean
 }
 
 type Query {
-	alumni(source: String, id: ID!): Alumni
+	node(id: ID!): Node
 	search(
 		first: Int,
 		after: String,

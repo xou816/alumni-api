@@ -22,8 +22,8 @@ export type Query = Partial<{
 	[Field.COMPANY]: string
 }>;
 
-export type Meta = {
-	[Field.ID]: string|number|null,
+export type Meta<I = Id> = {
+	[Field.ID]: I,
 	[Field.SOURCE]: string
 }
 
@@ -39,16 +39,22 @@ export type Details = {
 	[Field.PHONE]: string[] 
 }
 
-export type Alumni = Meta &	{[Field.URL]: string} & Partial<Details>;
-export type FullAlumni = Meta &	{[Field.URL]: string} & Details;
+export type Id = {
+	key: string,
+	source: string
+};
+
+export type Alumni<I = Id> = Meta<I> & Partial<Details>;
+export type FullAlumni<I = Id> = Meta<I> & Details;
 
 export type Node<R, N = any> = {node: R, cursor: N|null};
 export type Search<R, N = any> = Observable<Node<R, N>>;
 
-export interface AlumniProvider<C, E = {}, N = any> {
+export interface AlumniProvider<C, I extends {} = Id, E = {}, N = any> {
 	source(): string;
 	login(credentials: C): Observable<boolean>;
 	logout(): Observable<boolean>;
-	search(query: Query, cursor: N|null): Search<Alumni>;
-	getDetails(meta: Meta): Observable<FullAlumni & E>;
+	search(query: Query, cursor: N|null): Search<Alumni<I>>;
+	get(id: I): Observable<FullAlumni<I> & E>;
+	has(id: I): boolean;
 }

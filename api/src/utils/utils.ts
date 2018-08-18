@@ -24,3 +24,12 @@ export function getUpperClass(class_: string): string {
     let s = class_.split('-');
     return s[s.length - 1];
 }
+
+export function makeId<T>(payload: T): string {
+	return Buffer.from(JSON.stringify(payload))
+		.toString('base64');
+}
+
+export function parseId<T>(id: string): T {
+	return JSON.parse(Buffer.from(id, 'base64').toString());
+}

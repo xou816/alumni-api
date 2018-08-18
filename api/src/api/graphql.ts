@@ -10,11 +10,15 @@ import Alumnis from "../lib/alumnis";
 import {AggregatedAlumniProvider} from "../lib/aggregated";
 import {MockAlumniProvider} from "../lib/mock";
 import {Fetch, fetchFactory} from "../utils/fetch";
+import {makeId, parseId} from "../utils/utils";
 import {UsernamePasswordCredentials} from "../lib/credentials";
 import {redisKeyring} from "./auth";
 
+const T_ALUMNI = 'Alumni';
+const T_SOURCE = 'Source';
+
 const ALL = 'all';
-const SOURCES: {[k: string]: (f: Fetch) => AlumniProvider<any>} = {
+const SOURCES: {[k: string]: (f: Fetch) => AlumniProvider<any, any>} = {
 	[ALL]: f => new AggregatedAlumniProvider([new Alumnis(f), new CentraleCarrieres(f), new MockAlumniProvider()], redisKeyring),
 	alumnis: f => new Alumnis(f),
 	cc: f => new CentraleCarrieres(f),
@@ -23,6 +27,7 @@ const SOURCES: {[k: string]: (f: Fetch) => AlumniProvider<any>} = {
 
 export const schema = buildSchema(readFileSync(join(__dirname, '../../../schema.graphql')).toString());
 
+type MyRequest = Request & {user: any};
 type GetCredentials = (source: string) => Observable<any>;
 
 function credentialsForSource<C>(source: typeof ALL, master: C): Observable<C>;
@@ -32,7 +37,7 @@ function credentialsForSource(source: string, master: UsernamePasswordCredential
 		.filter(c => !(Object.keys(c).length === 0 && c.constructor === Object));
 }
 
-export const context = (request: Request & {user: any}) => {
+export const context = (request: MyRequest) => {
 	let credentials = request.user;
 	return {
 		request,
@@ -41,68 +46,91 @@ export const context = (request: Request & {user: any}) => {
 };
 
 type Result = Promise<{
-	edges: Array<{node: Alumni, cursor: string}>,
-	cursor: string|null
+	edges: Array<{node: Alumni<string>, cursor: string}>,
+	pageInfo: {hasNextPage: boolean, endCursor: string|null}
 }>;
 
-function toResult(search: Search<Alumni>, count: number): Result {
+function toResult(count: number, search: Search<Alumni<any>>): Result {
 	return search
 		.take(count)
-		.map(node => ({
-			node: node.node,
-			cursor: Buffer.from(JSON.stringify(node.cursor)).toString('base64')
+		.map(({node, cursor}) => ({
+			node: {...node, [Field.ID]: makeId({...node[Field.ID], _t: T_ALUMNI})},
+			cursor: makeId(cursor)
 		}))
 		.toArray()
 		.map(edges => ({
 			edges,
-			cursor: edges.length ? edges[edges.length - 1].cursor : null
+			pageInfo: edges.length === count ? 
+				{hasNextPage: true, endCursor: edges[edges.length - 1].cursor} : 
+				{hasNextPage: false, endCursor: null}
 		}))
 		.toPromise();
 }
 
-function alumniResolver(meta: Meta, {getCredentials}: {getCredentials: GetCredentials}): Promise<Alumni> {
-	let source = meta[Field.SOURCE] || ALL;
-	let provider = SOURCES[source](fetchFactory());
-	return getCredentials(source)
-		.flatMap(credentials => provider.login(credentials))
-		.flatMap(_ => provider.getDetails(meta))
+function alumniResolver(id: string, parsed: any, getCredentials: GetCredentials): Promise<Alumni<any>> {
+	let provider = SOURCES[ALL](fetchFactory());
+	return getCredentials(ALL)
 		.single()
+		.flatMap(credentials => provider.login(credentials))
+		.flatMap(_ => provider.get(parsed))
+		.map(alumni => ({...alumni, [Field.ID]: id, __typename: T_ALUMNI}))
 		.toPromise();
+}
+
+function sourceResolver(id: string, parsed: any, getCredentials: GetCredentials): Promise<any> {
+	let source = {
+		id,
+		key: parsed.key,
+		enabled: parsed.key === ALL,
+		__typename: T_SOURCE
+	};
+	return getCredentials(ALL)
+		.flatMap(c => Observable.from(Object.keys(c)))
+		.filter(key => key === parsed.key)
+		.map(key => ({...source, enabled: true}))
+		.defaultIfEmpty(source)
+		.toPromise();
+}
+
+function nodeResolver({id}: {id: string}, {getCredentials}: {getCredentials: GetCredentials}): Promise<any> {
+	let {_t, ...parsed} = parseId(id);
+	return _t === T_ALUMNI ? alumniResolver(id, parsed, getCredentials) :
+		_t === T_SOURCE ? sourceResolver(id, parsed, getCredentials) :
+		Promise.reject('node not found');
 }
 
 function searchResolver(query: Query & {first: number, after: string}, {getCredentials}: {getCredentials: GetCredentials}): Result {
 	let source = query[Field.SOURCE] || ALL;
 	let provider = SOURCES[source](fetchFactory());
-	let cursor = query.after == null ? null : 
-		JSON.parse(Buffer.from(query.after, 'base64').toString());
-	return toResult(getCredentials(source)
-		.flatMap(credentials => provider.login(credentials))
-		.flatMap(_ => provider.search(query, cursor)), 
-		query.first || 10);
+	let cursor = query.after == null ? null : parseId(query.after);
+	return toResult(query.first || 10, 
+		getCredentials(source)
+			.flatMap(credentials => provider.login(credentials))
+			.flatMap(_ => provider.search(query, cursor)));
 }
 
-function sourceResolve(args: any, {request}: {request: Request & {user: any}}) {
-	return redisKeyring
-		.getCredentials(request.user)
+function allSourcesResolver(args: any, {getCredentials}: {getCredentials: GetCredentials}) {
+	return getCredentials(ALL)
 		.map(Object.keys)
-		.map(keys => Object.keys(SOURCES).reduce((acc: {name: string, enabled: boolean}[], key) => {
+		.map(keys => Object.keys(SOURCES).reduce((acc: {id: string, key: string, enabled: boolean}[], key) => {
 			return acc.concat({
-				name: key,
+				id: makeId({_t: T_SOURCE, key}),
+				key,
 				enabled: key === ALL || keys.indexOf(key) > -1
 			})
 		}, []))
 		.toPromise();
 }
 
-function addSourceResolver(args: {source: string, credentials: UsernamePasswordCredentials}, {request}: {request: Request & {user: any}}) {
+function addSourceResolver(args: {source: string, credentials: UsernamePasswordCredentials}, {request, getCredentials}: {request: MyRequest, getCredentials: GetCredentials}) {
 	return redisKeyring.updateCredentials(request.user as any, args.source, args.credentials)
 		.toPromise()
-		.then(_ => sourceResolve(args, {request}));
+		.then(_ => allSourcesResolver(args, {getCredentials}));
 }
 
 export const resolver = {
-	alumni: alumniResolver,
+	node: nodeResolver,
 	search: searchResolver,
-	source: sourceResolve,
+	source:allSourcesResolver,
 	addSource: addSourceResolver
 };

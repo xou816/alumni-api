@@ -6,7 +6,7 @@ import {stringify} from "querystring";
 import {UsernamePasswordCredentials} from "./credentials";
 import {Fetch, asText} from "../utils/fetch";
 import {trimInner, flatten, getLowerClass} from "../utils/utils";
-import {AlumniProvider, Search, Alumni, FullAlumni, Query, Field, Sex, Meta} from "./api";
+import {AlumniProvider, Search, Alumni, FullAlumni, Query, Field, Sex, Meta, Id} from "./api";
 import {getUpperClass} from "../utils/utils";
 
 const BATCH_SIZE = 20;
@@ -22,14 +22,14 @@ function getAlumnis(doc: HTMLDocument): Alumni[] {
 	return doc.find('//div[@id="content"]//table[@class="striped"]//tr')
 		.map(tr => tr.find('td'))
 		.map(tds => {
-			let id = tds[0].get('a')!.attr('href').value().split('individu_id/').pop() || null;
+			let key = tds[0].get('a')!.attr('href').value().split('individu_id/').pop()!;
 			let fixed = trimInner(tds[0].text());
 			let res = NAME_REGEX.exec(fixed) || Array.from({length: 4}, x => '');
 			let born = res[3] != null ? ' ' + res[3].trim() : '';
 			return {
-				[Field.ID]: id,
+				[Field.ID]: {key, source: SOURCE},
 				[Field.SOURCE]: SOURCE,
-				[Field.URL]: DETAILS_REQ + id,
+				[Field.URL]: DETAILS_REQ + key,
 				[Field.LAST_NAME]: res[1].trim() + born,
 				[Field.FIRST_NAME]: res[2].trim(),
 				[Field.CLASS]: parseInt(tds[1].text() || '', 10)
@@ -128,7 +128,7 @@ type Cursor = {
 	last?: number
 };
 
-export default class Alumnis implements AlumniProvider<UsernamePasswordCredentials, {}, Cursor> {
+export default class Alumnis implements AlumniProvider<UsernamePasswordCredentials, Id, {}, Cursor> {
 
 	private fetch: Fetch;
 
@@ -187,12 +187,18 @@ export default class Alumnis implements AlumniProvider<UsernamePasswordCredentia
 		return this.searchPaged(query, next);
 	}
 
-	getDetails(meta: Meta) {
-		let alumni = {...meta, [Field.URL]: DETAILS_REQ + meta.id};
+	has(id: Id) {
+		let {source} = id;
+		return source === this.source();
+	}
+
+	get(id: Id) {
+		let {source, key} = id;
+		let alumni = {[Field.SOURCE]: source, [Field.ID]: id, [Field.URL]: DETAILS_REQ + key};
 		return this.fetch(alumni[Field.URL])
 			.flatMap(asText)
 			.map(parseHtmlString)
-			.map(doc => parseAlumni(doc, alumni));		
+			.map(doc => parseAlumni(doc, alumni));	 
 	}
 
 

@@ -6,19 +6,19 @@ type Cursor = {
 	[k: string]: any
 };
 
-export class AggregatedAlumniProvider implements AlumniProvider<UsernamePasswordCredentials, {}, Cursor> {
+export class AggregatedAlumniProvider implements AlumniProvider<UsernamePasswordCredentials, any, {}, Cursor> {
 
 	protected providers: AlumniProvider<any>[];
 	protected keyring: Keyring<UsernamePasswordCredentials>;
 
-	constructor(providers: AlumniProvider<any>[], keyring: Keyring<UsernamePasswordCredentials>) {
+	constructor(providers: AlumniProvider<any, any>[], keyring: Keyring<UsernamePasswordCredentials>) {
 		this.providers = providers;
 		this.keyring = keyring;
 	}
 
-	protected providerFor(source: string): AlumniProvider<any> {
+	protected providerFor(predicate: (p: AlumniProvider<any>) => boolean): AlumniProvider<any> {
 		let provider = this.providers
-			.find(p => p.source() === source);
+			.find(predicate);
 		if (provider == null) throw new Error('No known provider for this alumni!');
 		return provider;
 	}
@@ -30,7 +30,7 @@ export class AggregatedAlumniProvider implements AlumniProvider<UsernamePassword
 	login(master: UsernamePasswordCredentials) {
 		return this.keyring.getCredentials(master)
 			.flatMap(creds => Object.keys(creds).reduce((acc: Observable<boolean>, source) => {
-				return acc.flatMap(res => this.providerFor(source)
+				return acc.flatMap(res => this.providerFor(p => p.source() === source)
 						.login(creds[source])
 						.map(ok => ok && res));
 			}, Observable.of(true)));
@@ -52,9 +52,14 @@ export class AggregatedAlumniProvider implements AlumniProvider<UsernamePassword
 			.scan(({cursor}, cur) => ({ ...cur, cursor: {...cursor, ...cur.cursor} }));
 	}
 
-	getDetails(meta: Meta) {
-		let provider = this.providerFor(meta[Field.SOURCE]);
-		return provider.getDetails(meta);
+	get(id: any) {
+		this.providerFor(p => p.has(id));
+		return this.providerFor(p => p.has(id)).get(id);
+	}
+
+	has(id: any) {
+		return this.providers
+			.some(p => p.has(id));
 	}
 
 }

@@ -6,7 +6,7 @@ type Cursor = number;
 
 const mocked = [
 	{
-		[Field.ID]: 0,
+		[Field.ID]: {index: '0'},
 		[Field.SOURCE]: 'mock',
 		[Field.URL]: '',
 		[Field.FIRST_NAME]: 'Patrick',
@@ -19,7 +19,7 @@ const mocked = [
 		[Field.PHONE]: []
 	},
 	{
-		[Field.ID]: 1,
+		[Field.ID]: {index: '1'},
 		[Field.SOURCE]: 'mock',
 		[Field.URL]: '',
 		[Field.FIRST_NAME]: 'Sponge Bob',
@@ -32,7 +32,7 @@ const mocked = [
 		[Field.PHONE]: []
 	},
 	{
-		[Field.ID]: 2,
+		[Field.ID]: {index: '2'},
 		[Field.SOURCE]: 'mock',
 		[Field.URL]: '',
 		[Field.FIRST_NAME]: 'Sandy',
@@ -45,7 +45,7 @@ const mocked = [
 		[Field.PHONE]: []
 	},
 	{
-		[Field.ID]: 3,
+		[Field.ID]: {index: '3'},
 		[Field.SOURCE]: 'mock',
 		[Field.URL]: '',
 		[Field.FIRST_NAME]: 'Eugene',
@@ -58,7 +58,7 @@ const mocked = [
 		[Field.PHONE]: []
 	},
 	{
-		[Field.ID]: 4,
+		[Field.ID]: {index: '4'},
 		[Field.SOURCE]: 'mock',
 		[Field.URL]: '',
 		[Field.FIRST_NAME]: 'Pearl',
@@ -72,7 +72,7 @@ const mocked = [
 	}
 ]
 
-export class MockAlumniProvider implements AlumniProvider<any, {}, Cursor> {
+export class MockAlumniProvider implements AlumniProvider<any, {index: string}, {}, Cursor> {
 
 	source() {
 		return 'mock';
@@ -94,13 +94,20 @@ export class MockAlumniProvider implements AlumniProvider<any, {}, Cursor> {
 				(query[Field.COMPANY] == null || alumni[Field.COMPANY]!.find(c => c.toLowerCase() === query[Field.COMPANY]!.toLowerCase()) != null) &&
 				(query[Field.CLASS] == null || alumni[Field.CLASS]!.toString().toLowerCase() === query[Field.CLASS]!.toLowerCase()))
 			.map(node => ({node, cursor: {c:Math.random().toString().substring(2, 8)}}))
-			.delay(2000);
+			.delay(1500);
 	}
 
-	getDetails(meta: Meta) {
+	get(id: {index: string}) {
 		return Observable.from(mocked)
-			.find(alumni => alumni[Field.ID] === meta[Field.ID])
-			.delay(1500);
+			.find(alumni => (alumni[Field.ID].index || null) === id.index)
+			.delay(1000);
+	}
+
+	has(id: {index: string}) {
+		let len = mocked
+			.filter(alumni => (alumni[Field.ID].index || null) === id.index)
+			.length;
+		return len > 0;
 	}
 
 }

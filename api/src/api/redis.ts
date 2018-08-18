@@ -1,6 +1,5 @@
 import {createClient, RedisClient} from 'redis';
 import {parse} from 'url';
-import {createHash} from 'crypto';
 
 export default function createRedisClient(): RedisClient {
 	if (process.env.REDISTOGO_URL != null) {

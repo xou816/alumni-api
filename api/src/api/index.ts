@@ -31,21 +31,6 @@ app.use('/graphql', graphqlHttp(req => ({
 	})
 })));
 
-// app.post('/auth/:source', (req, res) => {
-// 	let source = req.params.source;
-// 	redisKeyring.updateCredentials(req.user as any, source, req.body)
-// 		.subscribe(() => {
-// 			res.status(202);
-// 			res.send({
-// 				message: 'Authentication details saved',
-// 				source: source
-// 			});
-// 		}, err => {
-// 			res.status(500);
-// 			res.send();
-// 		});
-// });
-
 
 let port = process.env.PORT != null ? process.env.PORT : 3000;
 app.listen(port, () => console.log(port));

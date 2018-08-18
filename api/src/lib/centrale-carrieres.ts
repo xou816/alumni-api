@@ -11,7 +11,7 @@ import * as FormData from "form-data";
 import {UsernamePasswordCredentials} from "./credentials";
 import {Fetch, asText} from "../utils/fetch";
 import {getLowerClass, splitLen} from "../utils/utils";
-import {AlumniProvider, Search, Alumni, FullAlumni, Query, Field, Sex, Meta} from "./api";
+import {AlumniProvider, Search, Alumni, FullAlumni, Query, Field, Sex, Meta, Id} from "./api";
 import {getUpperClass} from "../utils/utils";
 
 const SOURCE = 'cc';
@@ -69,15 +69,15 @@ function getAlumnis(doc: HTMLDocument): Alumni[] {
 	return doc.find('//tr[@class="Tmpl_Table_List0" or @class="Tmpl_Table_List1"]')
 		.map(tr => tr.find('td'))
 		.map(tds => {
-			let id = extractId(tds[7].get('a')!.attr('href').value());
+			let key = extractId(tds[7].get('a')!.attr('href').value());
 			return {
 				[Field.LAST_NAME]: tds[0].text().trim(),
 				[Field.FIRST_NAME]: tds[1].text().trim(),
 				[Field.COMPANY]: [tds[2].text().trim()],
 				[Field.SCHOOL]: tds[3].text().split('Centralien de').pop()!.trim(),
 				[Field.CLASS]: parseInt(tds[4].text().trim() || '', 10),
-				[Field.ID]: id,
-				[Field.URL]: DETAILS_REQ + '?id=' + id,
+				[Field.ID]: {key, source: SOURCE},
+				[Field.URL]: DETAILS_REQ + '?id=' + key,
 				[Field.SOURCE]: SOURCE
 			}
 		});
@@ -163,7 +163,7 @@ type Cursor = {
 	last?: number
 };
 
-export default class CentraleCarrieres implements AlumniProvider<UsernamePasswordCredentials, {}, Cursor> {
+export default class CentraleCarrieres implements AlumniProvider<UsernamePasswordCredentials, Id, {}, Cursor> {
 
 	private fetch: Fetch;
 
@@ -217,8 +217,14 @@ export default class CentraleCarrieres implements AlumniProvider<UsernamePasswor
 		return this.searchPaged(query, next);
 	}
 
-	getDetails(meta: Meta) {
-		let alumni = {...meta, [Field.URL]: DETAILS_REQ + '?id=' + meta.id};
+	has(id: Id) {
+		let {source} = id;
+		return source === this.source();
+	}
+
+	get(id: Id) {
+		let {source, key} = id;
+		let alumni = {[Field.SOURCE]: source, [Field.ID]: id, [Field.URL]: DETAILS_REQ + '?id=' + key};
 		return this.fetch(alumni[Field.URL])
 			.flatMap(asText)
 			.map(parseHtmlString)
