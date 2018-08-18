@@ -133,6 +133,7 @@ export default class Alumnis implements AlumniProvider<UsernamePasswordCredentia
 	private fetch: Fetch;
 
 	private searchPaged(query: Query, cursor: Cursor): Search<Alumni> {
+		let skip = cursor.skip || 0;
 		return this.fetch(buildQuery(query, cursor.page))
 			.flatMap(asText)
 			.map(parseHtmlString)
@@ -140,8 +141,8 @@ export default class Alumnis implements AlumniProvider<UsernamePasswordCredentia
 				let last = cursor.last || getLastPage(doc);
 				let next = cursor.page + 1;
 				return Observable.from(getAlumnis(doc))
-					.skip(cursor.skip || 0)
-					.map((alumni, skip) => ({ node: alumni, cursor: {...cursor, last, skip} }))
+					.skip(skip)
+					.map((alumni, index) => ({ node: alumni, cursor: {...cursor, last, skip: skip + index} }))
 					.concat(next <= last ? this.searchPaged(query, {...cursor, last, page: next, skip: 0}) : Observable.from([]));
 			});
 	}

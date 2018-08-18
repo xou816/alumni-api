@@ -168,6 +168,7 @@ export default class CentraleCarrieres implements AlumniProvider<UsernamePasswor
 	private fetch: Fetch;
 
 	private searchPaged(query: Query, cursor: Cursor): Search<Alumni> {
+		let skip = cursor.skip || 0;
 		let form = queryForm(query);
 		return this.fetch(SEARCH_REQ + '?start=' + cursor.start, { method: 'POST', body: form, headers: form.getHeaders() })
 			.flatMap(asText)
@@ -176,8 +177,8 @@ export default class CentraleCarrieres implements AlumniProvider<UsernamePasswor
 				let last = cursor.last || getLastOffset(doc);
 				let next = cursor.start + BATCH_SIZE;
 				return Observable.from(getAlumnis(doc))
-					.skip(cursor.skip || 0)
-					.map((alumni, skip) => ({ node: alumni, cursor: {...cursor, skip, last} }))
+					.skip(skip)
+					.map((alumni, index) => ({ node: alumni, cursor: {...cursor, skip: skip + index, last} }))
 					.concat(next <= last ? this.searchPaged(query, {...cursor, start: next, skip: 0, last}) : Observable.from([]));
 			});
 	}
