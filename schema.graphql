@@ -8,6 +8,10 @@ interface Node {
 type PageInfo {
   """When paginating forwards, are there more items?"""
   hasNextPage: Boolean!
+  """When paginating backwards, are there more items?"""
+  hasPreviousPage: Boolean!
+  """When paginating backwards, the cursor to continue."""
+  startCursor: String
   """When paginating forwards, the cursor to continue."""
   endCursor: String
 }

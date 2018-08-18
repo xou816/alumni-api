@@ -16,7 +16,7 @@ const styles = theme => ({
 export default class ResultsTable extends React.Component {
 
  	render() {
-  		let {classes, query, edges} = this.props;
+  		let {classes, query, results} = this.props;
     	return (
         <Paper>
           <Table>
@@ -30,8 +30,8 @@ export default class ResultsTable extends React.Component {
             </TableHead>
             <TableBody>
             {
-              edges.map(edge => (
-                <TableRow hover key={edge.node.id}>
+              results.map(edge => (
+                <TableRow component="a" hover key={edge.node.id}>
                   <TableCell>{edge.node.first_name}</TableCell>
                   <TableCell>{edge.node.last_name}</TableCell>
                   <TableCell>{edge.node.class}</TableCell>

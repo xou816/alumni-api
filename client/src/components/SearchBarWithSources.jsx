@@ -27,7 +27,8 @@ export default class SearchBarWithSources extends React.Component {
           query={graphql`
             query SearchBarWithSourcesQuery {
               source {
-                name
+                id
+                key
                 enabled
               }
             }
@@ -41,14 +42,14 @@ export default class SearchBarWithSources extends React.Component {
                 onSourceSelect={onSourceSelect} 
                 onSearch={query => {
                   if (props && props.source) {
-                    onSearch({...query, source: props.source[selected].name })                  
+                    onSearch({...query, source: props.source[selected].key })                  
                   }
                 }} />
               {
                 props && props.source && !props.source[selected].enabled ?
                   (<Fade in>
                     <WarningMessage>
-                      Source is not configured! <AddSourceDialog source={props.source[selected].name} ButtonProps={{className: classes.button}} />
+                      Source is not configured! <AddSourceDialog source={props.source[selected].key} ButtonProps={{className: classes.button}} />
                     </WarningMessage>
                   </Fade>) :
                   null

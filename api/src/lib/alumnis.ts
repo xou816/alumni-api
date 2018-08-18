@@ -132,6 +132,19 @@ export default class Alumnis implements AlumniProvider<UsernamePasswordCredentia
 
 	private fetch: Fetch;
 
+	private nextCursor(cursor: Cursor|null, offset: number = 1): Cursor {
+		let next: Cursor;
+		if (cursor === null) {
+			next = {page: 1};
+		} else {
+			let {page, skip, last} = {skip: 0, ...cursor};
+			let mod = (skip + offset)%BATCH_SIZE;
+			let div = Math.floor((skip + offset)/BATCH_SIZE);
+			next = {page: page + div, skip: mod, last};
+		}
+		return next;
+	}
+
 	private searchPaged(query: Query, cursor: Cursor): Search<Alumni> {
 		let skip = cursor.skip || 0;
 		return this.fetch(buildQuery(query, cursor.page))
@@ -142,7 +155,7 @@ export default class Alumnis implements AlumniProvider<UsernamePasswordCredentia
 				let next = cursor.page + 1;
 				return Observable.from(getAlumnis(doc))
 					.skip(skip)
-					.map((alumni, index) => ({ node: alumni, cursor: {...cursor, last, skip: skip + index} }))
+					.map((alumni, index) => ({ node: alumni, cursor: this.nextCursor(cursor, index) }))
 					.concat(next <= last ? this.searchPaged(query, {...cursor, last, page: next, skip: 0}) : Observable.from([]));
 			});
 	}
@@ -176,16 +189,7 @@ export default class Alumnis implements AlumniProvider<UsernamePasswordCredentia
 	}
 
 	search(query: Query, cursor: Cursor|null) {
-		let next: Cursor;
-		if (cursor === null) {
-			next = {page: 1};
-		} else {
-			let {page, skip, last} = {skip: 0, ...cursor};
-			next = skip + 1 === BATCH_SIZE ?
-				{page: page + 1, skip: 0, last} :
-				{page, skip: skip + 1, last};
-		}
-		return this.searchPaged(query, next);
+		return this.searchPaged(query, this.nextCursor(cursor));
 	}
 
 	has(id: Id) {

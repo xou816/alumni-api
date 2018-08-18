@@ -9,7 +9,10 @@ const styles = theme => ({
     padding: `${5 * theme.spacing.unit}px 25%`,
     background: theme.palette.grey[100],
     height: '100%',
-    minHeight: '100vh'
+    minHeight: '100vh',
+    [theme.breakpoints.down(767)]: {
+    	padding: `${5 * theme.spacing.unit}px ${theme.spacing.unit}px`,
+    }
   }
 });
 

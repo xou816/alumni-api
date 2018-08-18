@@ -4,7 +4,8 @@ import environment from './environment';
 const mutation = graphql`
   mutation addSourceMutation($source: String, $credentials: Credentials) {
     addSource(source: $source, credentials: $credentials) {
-      name
+      id
+      key
       enabled
     }
   }

@@ -25,8 +25,10 @@ export default class AddSourceDialog extends React.Component {
     this.setState({ [key]: event.currentTarget.value })
   }
 
-  handleSave = () => addSource(this.props.source, this.state.username, this.state.password)
-    .then(_ => this.setState({ open: false }));
+  handleSave = () => {
+    this.setState({ open: false });
+    addSource(this.props.source, this.state.username, this.state.password);
+  }
 
   render() {
     let {username, password} = this.state;

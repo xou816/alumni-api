@@ -167,6 +167,19 @@ export default class CentraleCarrieres implements AlumniProvider<UsernamePasswor
 
 	private fetch: Fetch;
 
+	private nextCursor(cursor: Cursor|null, offset: number = 1): Cursor {
+		let next: Cursor;
+		if (cursor === null) {
+			next = {start: 0};
+		} else {
+			let {start, skip, last} = {skip: 0, ...cursor};
+			let mod = (skip + offset)%BATCH_SIZE;
+			let div = Math.floor((skip + offset)/BATCH_SIZE);
+			next = {start: start + div*BATCH_SIZE, skip: mod, last};
+		}
+		return next;
+	}
+
 	private searchPaged(query: Query, cursor: Cursor): Search<Alumni> {
 		let skip = cursor.skip || 0;
 		let form = queryForm(query);
@@ -178,7 +191,7 @@ export default class CentraleCarrieres implements AlumniProvider<UsernamePasswor
 				let next = cursor.start + BATCH_SIZE;
 				return Observable.from(getAlumnis(doc))
 					.skip(skip)
-					.map((alumni, index) => ({ node: alumni, cursor: {...cursor, skip: skip + index, last} }))
+					.map((alumni, index) => ({ node: alumni, cursor: this.nextCursor(cursor, index) }))
 					.concat(next <= last ? this.searchPaged(query, {...cursor, start: next, skip: 0, last}) : Observable.from([]));
 			});
 	}
@@ -206,16 +219,7 @@ export default class CentraleCarrieres implements AlumniProvider<UsernamePasswor
 	}
 
 	search(query: Query, cursor: Cursor|null) {
-		let next: Cursor;
-		if (cursor === null) {
-			next = {start: 0};
-		} else {
-			let {start, skip, last} = {skip: 0, ...cursor};
-			next = skip + 1 === BATCH_SIZE ?
-				{start: start + BATCH_SIZE, skip: 0, last} :
-				{start, skip: skip + 1, last};
-		}
-		return this.searchPaged(query, next);
+		return this.searchPaged(query, this.nextCursor(cursor));
 	}
 
 	has(id: Id) {

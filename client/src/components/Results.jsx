@@ -1,10 +1,11 @@
 import React from 'react';
 import { withStyles } from '@material-ui/core/styles';
-import { QueryRenderer, graphql } from 'react-relay';
+import { createPaginationContainer, QueryRenderer, graphql } from 'react-relay';
 import environment from '../environment';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Slide from '@material-ui/core/Slide';
 import ResultsTable from './ResultsTable';
+import Button from '@material-ui/core/Button';
 
 const styles = theme => ({
   center: {
@@ -12,35 +13,86 @@ const styles = theme => ({
   }
 });
 
-@withStyles(styles)
-export default class Results extends React.Component {
+class Results extends React.Component {
 
  	render() {
-  		let {classes, query} = this.props;
-    	return (
+    let {search, classes, relay} = this.props;
+    return search && search.search ? (
+        <Slide in direction="up">
+          <React.Fragment>
+            <ResultsTable results={search.search.edges} />
+            {relay.hasMore() ? <Button onClick={this.loadMore} color="secondary">Load more</Button> : null}
+          </React.Fragment>
+        </Slide>
+      ) : null;
+  }
+
+  loadMore = () => {
+    let {relay} = this.props;
+    if (relay.hasMore() && !relay.isLoading()) {
+      relay.loadMore(10);
+    }
+  }
+
+}
+
+const ResultsPaginated = createPaginationContainer(Results, {
+  search: graphql`
+    fragment Results_search on Query @argumentDefinitions(
+      count: {type: "Int", defaultValue: 10}
+      cursor: {type: "String"}
+      source: {type: "String", defaultValue: "all"}
+      class: {type: "String"}
+      first_name: {type: "String"}
+      last_name: {type: "String"}
+      company: {type: "String"}) {
+      search(first: $count, after: $cursor, source: $source, class: $class, first_name: $first_name, last_name: $last_name, company: $company) @connection(key: "Results_search") {
+        edges {
+          node {
+            id
+            first_name
+            last_name
+            class
+            url
+          }
+        }
+      }
+    }`
+  },
+  {
+    direction: 'forward',
+    getConnectionFromProps: props => props.search && props.search.search,
+    getVariables: (props, {count, cursor}, fragmentVariables) => ({
+      ...fragmentVariables, count, cursor
+    }),
+    query: graphql`
+      query ResultsLoadMoreQuery($count: Int, $cursor: String, $source: String, $class: String, $first_name: String, $last_name: String, $company: String) {
+        ...Results_search @arguments(count: $count, cursor: $cursor, source: $source, class: $class, first_name: $first_name, last_name: $last_name, company: $company)
+      }
+    `
+  }
+);
+
+@withStyles(styles)
+export default class extends React.Component {
+
+  render() {
+    let {query, classes} = this.props;
+    return (
         <QueryRenderer 
           environment={environment}
           query={graphql`
-            query ResultsQuery($source: String, $first_name: String, $last_name: String, $class: String, $company: String) {
-              search(source: $source, class: $class, company: $company, first_name: $first_name, last_name: $last_name) {
-                edges {
-                  node {
-                    id
-                    source
-                    url
-                    first_name
-                    last_name
-                    class
-                  }
-                }
-              }
+            query ResultsLoadMoreQuery($count: Int, $cursor: String, $source: String, $class: String, $first_name: String, $last_name: String, $company: String) {
+              ...Results_search @arguments(count: $count, cursor: $cursor, source: $source, class: $class, first_name: $first_name, last_name: $last_name, company: $company)
             }
-            `}
-          variables={query}
-          render={({error, props}) => props && props.search ? 
-            <Slide in direction="up"><ResultsTable edges={props.search.edges} /></Slide> : 
-            <div className={classes.center}><CircularProgress /></div>}>
-        </QueryRenderer>
-    	);
-  	}
+          `}
+          variables={{...query, count: 10}}
+          render={({error, props}) => (
+              <div className={classes.center}>
+                {props ? <ResultsPaginated search={props} /> : <CircularProgress />}
+              </div>
+           )} />
+      );
+  }
+
 }

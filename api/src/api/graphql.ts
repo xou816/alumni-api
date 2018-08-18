@@ -109,10 +109,10 @@ function searchResolver(query: Query & {first: number, after: string}, {getCrede
 			.flatMap(_ => provider.search(query, cursor)));
 }
 
-function allSourcesResolver(args: any, {getCredentials}: {getCredentials: GetCredentials}) {
-	return getCredentials(ALL)
+function allSourcesResolver(args: any, {request}: {request: MyRequest}) {
+	return redisKeyring.getCredentials(request.user)
 		.map(Object.keys)
-		.map(keys => Object.keys(SOURCES).reduce((acc: {id: string, key: string, enabled: boolean}[], key) => {
+		.map(keys => Object.keys(SOURCES).reduce((acc: Array<{id: string, key: string, enabled: boolean}>, key) => {
 			return acc.concat({
 				id: makeId({_t: T_SOURCE, key}),
 				key,
@@ -122,10 +122,10 @@ function allSourcesResolver(args: any, {getCredentials}: {getCredentials: GetCre
 		.toPromise();
 }
 
-function addSourceResolver(args: {source: string, credentials: UsernamePasswordCredentials}, {request, getCredentials}: {request: MyRequest, getCredentials: GetCredentials}) {
+function addSourceResolver(args: {source: string, credentials: UsernamePasswordCredentials}, {request}: {request: MyRequest}) {
 	return redisKeyring.updateCredentials(request.user as any, args.source, args.credentials)
 		.toPromise()
-		.then(_ => allSourcesResolver(args, {getCredentials}));
+		.then(_ => allSourcesResolver(args, {request}));
 }
 
 export const resolver = {

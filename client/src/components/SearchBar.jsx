@@ -68,12 +68,13 @@ export default class SearchBar extends React.Component {
               onChange={(e, v) => onSourceSelect(v)} 
               value={selected} 
               scrollable
+              scrollButtons="auto"
               TabIndicatorProps={{style: {top: 0, height: '5px'}}}>
           {sources.map(source => (
-            <Tab key={source.name} label={
+            <Tab key={source.key} label={
               source.enabled ?
-              pretty[source.name] :
-              <Badge className={classes.badge} badgeContent="!" color="secondary">{pretty[source.name]}</Badge>
+              pretty[source.key] :
+              <Badge className={classes.badge} badgeContent="!" color="secondary">{pretty[source.key]}</Badge>
             } />
           ))}
         </Tabs>
