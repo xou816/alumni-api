@@ -8,12 +8,12 @@ import Profile from "./components/Profile";
 
 const styles = theme => ({
   root: {
-    padding: `${5 * theme.spacing.unit}px 25%`,
+    padding: `${3 * theme.spacing.unit}px 25%`,
     background: theme.palette.grey[100],
     height: '100%',
     minHeight: '100vh',
     [theme.breakpoints.down(767)]: {
-    	padding: `${5 * theme.spacing.unit}px ${theme.spacing.unit}px`,
+    	padding: `${1 * theme.spacing.unit}px ${theme.spacing.unit}px`,
     }
   }
 });
@@ -38,12 +38,8 @@ export default class extends React.Component {
         <React.Fragment>
           <CssBaseline />
           <div className={classes.root}>
-            <Route path="/" exact render={() => (
-              <React.Fragment>
-                <SearchBarWithSources selected={source} sources={[]} onSearch={this.onSearch} onSourceSelect={this.onSourceSelect} />
-                {query ? <Results query={query} /> : null}
-              </React.Fragment>
-             )} />
+            <SearchBarWithSources selected={source} sources={[]} onSearch={this.onSearch} onSourceSelect={this.onSourceSelect} />
+            <Route path="/" exact render={() => query ? <Results query={query} /> : null} />
             <Route path="/:id" component={({match}) => <Profile id={match.params.id} />} />
           </div>
         </React.Fragment>

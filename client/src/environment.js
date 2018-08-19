@@ -3,13 +3,18 @@ import {
   Network,
   RecordSource,
   Store,
+  QueryResponseCache
 } from 'relay-runtime';
+
+const cache = new QueryResponseCache({ size: 250, ttl: 60 * 5 * 1000 });
 
 function fetchQuery(
   operation,
   variables,
 ) {
-  return fetch('/api', {
+  let queryID = operation.name;
+  let cachedData = cache.get(queryID, variables);
+  return cachedData !== null ? cachedData : fetch('/api', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -19,9 +24,14 @@ function fetchQuery(
       query: operation.text,
       variables,
     }),
-  }).then(response => {
-    return response.json();
-  });
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (operation.operationKind !== 'mutation') {
+      cache.set(queryID, variables, data);
+    }
+    return data;
+  })
 }
 
 const environment = new Environment({

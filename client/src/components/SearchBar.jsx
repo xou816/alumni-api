@@ -10,14 +10,9 @@ import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 import Badge from '@material-ui/core/Badge';
 import pretty from '../sources';
+import { Link } from 'react-router-dom'
 
 const styles = theme => ({
-  root: {
-    padding: `${5 * theme.spacing.unit}px 25%`,
-    background: theme.palette.grey[100],
-    height: '100%',
-    minHeight: '100vh'
-  },
   tabs: {
     marginBottom: theme.spacing.unit * 2
   },
@@ -80,7 +75,7 @@ export default class SearchBar extends React.Component {
         </Tabs>
     		<SearchField onSearchChanged={this.onSearchChanged} />
     		<div className={classes.buttonContainer}>
-	    		<Button onClick={this.onClick} color="secondary" variant="extendedFab">
+	    		<Button component={Link} to="/" onClick={this.onClick} color="secondary" variant="extendedFab">
 	        	<SearchIcon /> Search
 	      	</Button>
       	</div>

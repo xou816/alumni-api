@@ -60,6 +60,7 @@ const ResultsPaginated = createPaginationContainer(Results, {
             last_name
             class
             url
+            source
           }
         }
       }
