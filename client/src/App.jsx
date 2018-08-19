@@ -3,6 +3,8 @@ import { withStyles } from '@material-ui/core/styles';
 import SearchBarWithSources from './components/SearchBarWithSources';
 import Results from './components/Results';
 import CssBaseline from '@material-ui/core/CssBaseline';
+import { HashRouter as Router, Route } from "react-router-dom";
+import Profile from "./components/Profile";
 
 const styles = theme => ({
   root: {
@@ -17,28 +19,35 @@ const styles = theme => ({
 });
 
 @withStyles(styles)
-export default class App extends React.Component {
+export default class extends React.Component {
 
 	state = {
 		query: null,
 		source: 0
 	}
 
-  	onSearch = query => this.setState({query})
+  onSearch = query => this.setState({query})
 
-  	onSourceSelect = source => this.setState({source})
+  onSourceSelect = source => this.setState({source})
 
  	render() {
-  		let {classes} = this.props;
-  		let {query, source} = this.state;
-    	return (
+		let {classes} = this.props;
+		let {query, source} = this.state;
+  	return (
+      <Router>
         <React.Fragment>
           <CssBaseline />
           <div className={classes.root}>
-            <SearchBarWithSources selected={source} sources={[]} onSearch={this.onSearch} onSourceSelect={this.onSourceSelect} />
-	    	{query ? <Results query={query} /> : null}
+            <Route path="/" exact render={() => (
+              <React.Fragment>
+                <SearchBarWithSources selected={source} sources={[]} onSearch={this.onSearch} onSourceSelect={this.onSourceSelect} />
+                {query ? <Results query={query} /> : null}
+              </React.Fragment>
+             )} />
+            <Route path="/:id" component={({match}) => <Profile id={match.params.id} />} />
           </div>
         </React.Fragment>
+      </Router>
       );
   	}
 }

@@ -15,13 +15,18 @@ const styles = theme => ({
 
 class Results extends React.Component {
 
+  state = {
+    loading: false
+  }
+
  	render() {
     let {search, classes, relay} = this.props;
+    let {loading} = this.state;
     return search && search.search ? (
         <Slide in direction="up">
           <React.Fragment>
             <ResultsTable results={search.search.edges} />
-            {relay.hasMore() ? <Button onClick={this.loadMore} color="secondary">Load more</Button> : null}
+            {relay.hasMore() ? <Button disabled={loading} onClick={this.loadMore} color="secondary">Load more</Button> : null}
           </React.Fragment>
         </Slide>
       ) : null;
@@ -30,7 +35,8 @@ class Results extends React.Component {
   loadMore = () => {
     let {relay} = this.props;
     if (relay.hasMore() && !relay.isLoading()) {
-      relay.loadMore(10);
+      this.setState({ loading: true });
+      relay.loadMore(20, err => this.setState({ loading: false }));
     }
   }
 
@@ -39,7 +45,7 @@ class Results extends React.Component {
 const ResultsPaginated = createPaginationContainer(Results, {
   search: graphql`
     fragment Results_search on Query @argumentDefinitions(
-      count: {type: "Int", defaultValue: 10}
+      count: {type: "Int", defaultValue: 20}
       cursor: {type: "String"}
       source: {type: "String", defaultValue: "all"}
       class: {type: "String"}
@@ -82,11 +88,11 @@ export default class extends React.Component {
         <QueryRenderer 
           environment={environment}
           query={graphql`
-            query ResultsLoadMoreQuery($count: Int, $cursor: String, $source: String, $class: String, $first_name: String, $last_name: String, $company: String) {
+            query ResultsQuery($count: Int, $cursor: String, $source: String, $class: String, $first_name: String, $last_name: String, $company: String) {
               ...Results_search @arguments(count: $count, cursor: $cursor, source: $source, class: $class, first_name: $first_name, last_name: $last_name, company: $company)
             }
           `}
-          variables={{...query, count: 10}}
+          variables={{...query, count: 20}}
           render={({error, props}) => (
               <div className={classes.center}>
                 {props ? <ResultsPaginated search={props} /> : <CircularProgress />}

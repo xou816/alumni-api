@@ -8,8 +8,13 @@ import TableRow from '@material-ui/core/TableRow';
 import Paper from '@material-ui/core/Paper';
 import Icon from '@material-ui/icons/OpenInNew';
 import Button from '@material-ui/core/Button';
+import { Link } from "react-router-dom";
+import classnames from 'classnames';
 
 const styles = theme => ({
+  link: {
+    textDecoration: 'none'
+  }
 });
 
 @withStyles(styles)
@@ -31,7 +36,7 @@ export default class ResultsTable extends React.Component {
             <TableBody>
             {
               results.map(edge => (
-                <TableRow component="a" hover key={edge.node.id}>
+                <TableRow component={({children, className, ...other}) => <Link {...other} className={classnames(className, classes.link)} to={`/${edge.node.id}`}>{children}</Link>} hover key={edge.node.id}>
                   <TableCell>{edge.node.first_name}</TableCell>
                   <TableCell>{edge.node.last_name}</TableCell>
                   <TableCell>{edge.node.class}</TableCell>
