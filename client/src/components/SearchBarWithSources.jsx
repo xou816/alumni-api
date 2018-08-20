@@ -6,17 +6,34 @@ import SearchBar from './SearchBar';
 import WarningMessage from './WarningMessage';
 import AddSourceDialog from './AddSourceDialog';
 import Fade from '@material-ui/core/Fade';
+import Button from '@material-ui/core/Button';
 
 const styles = theme => ({
-  center: {
-    textAlign: 'center'
-  },
   button: {
     color: theme.palette.primary.contrastText
   }
 });
 
 @withStyles(styles)
+class Warning extends React.Component {
+
+  state = {open: false}
+
+  render() {
+    let {source, classes} = this.props;
+    let {open} = this.state;
+    return (
+      <Fade in>
+        <WarningMessage>
+          Source is not configured!
+          <Button className={classes.button} onClick={() => this.setState({ open: true })}>Configure</Button>
+          <AddSourceDialog open={open} source={source} handleClose={() => this.setState({ open: false })} />
+        </WarningMessage>
+      </Fade>
+    );
+  }
+}
+
 export default class SearchBarWithSources extends React.Component {
 
   render() {
@@ -45,15 +62,8 @@ export default class SearchBarWithSources extends React.Component {
                     onSearch({...query, source: props.source[selected].key })                  
                   }
                 }} />
-              {
-                props && props.source && !props.source[selected].enabled ?
-                  (<Fade in>
-                    <WarningMessage>
-                      Source is not configured! <AddSourceDialog source={props.source[selected].key} ButtonProps={{className: classes.button}} />
-                    </WarningMessage>
-                  </Fade>) :
-                  null
-              }
+              { props && props.source && !props.source[selected].enabled ? 
+                  <Warning source={props.source[selected].key} /> : null }
             </React.Fragment>
             )} />
       );

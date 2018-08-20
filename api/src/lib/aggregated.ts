@@ -53,7 +53,6 @@ export class AggregatedAlumniProvider implements AlumniProvider<UsernamePassword
 	}
 
 	get(id: any) {
-		this.providerFor(p => p.has(id));
 		return this.providerFor(p => p.has(id)).get(id);
 	}
 

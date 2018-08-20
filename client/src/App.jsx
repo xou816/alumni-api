@@ -5,6 +5,7 @@ import Results from './components/Results';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import { HashRouter as Router, Route } from "react-router-dom";
 import Profile from "./components/Profile";
+import { LoginDialog } from './components/AddSourceDialog';
 
 const styles = theme => ({
   root: {
@@ -23,25 +24,51 @@ export default class extends React.Component {
 
 	state = {
 		query: null,
-		source: 0
+		source: 0,
+    user: null
 	}
+
+  constructor() {
+    super();
+    let user = localStorage.getItem('user');
+    if (user) {
+      this.state = {...this.state, user};
+    }
+  }
 
   onSearch = query => this.setState({query})
 
   onSourceSelect = source => this.setState({source})
 
+  onOk = (u, p) => {
+    let user = btoa(`${u}:${p}`);
+    localStorage.setItem('user', user);
+    this.setState({user});
+  }
+
  	render() {
 		let {classes} = this.props;
-		let {query, source} = this.state;
+		let {query, source, user} = this.state;
   	return (
       <Router>
         <React.Fragment>
           <CssBaseline />
           <div className={classes.root}>
-            <SearchBarWithSources selected={source} sources={[]} onSearch={this.onSearch} onSourceSelect={this.onSourceSelect} />
-            <Route path="/" exact render={() => query ? <Results query={query} /> : null} />
+            {
+              user === null ? <LoginDialog 
+                title="Login"
+                text="Please login to use this tool. If this is your first time using it, just pick a username and a password!" 
+                handleOk={this.onOk}
+                open /> : <SearchBarWithSources 
+                selected={source} 
+                sources={[]} 
+                onSearch={this.onSearch} 
+                onSourceSelect={this.onSourceSelect} />
+            }
+            <Route path="/" exact render={() => query && user ? <Results query={query} /> : null} />
             <Route path="/:id" component={({match}) => <Profile id={match.params.id} />} />
           </div>
+          
         </React.Fragment>
       </Router>
       );

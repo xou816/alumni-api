@@ -14,11 +14,15 @@ function fetchQuery(
 ) {
   let queryID = operation.name;
   let cachedData = cache.get(queryID, variables);
+  let user = localStorage.getItem('user');
+  if (user == null) {
+    return Promise.reject();
+  }
   return cachedData !== null ? cachedData : fetch('/api', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': 'Basic dXNlcjpwYXNzd29yZA=='
+      'Authorization': `Basic ${user}`
     },
     body: JSON.stringify({
       query: operation.text,
