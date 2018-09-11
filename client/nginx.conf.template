@@ -1,0 +1,26 @@
+worker_processes 1; # Heroku dynos have at least four cores.
+
+error_log stderr;
+pid /var/run/nginx.pid;
+
+events {
+  worker_connections 1024;
+}
+
+http {
+  access_log /dev/stdout;
+  server_tokens off;
+  
+  server {
+    listen $PORT;
+    
+    location / {
+      root /usr/share/nginx/html;
+    }
+
+    location /api {
+      proxy_pass http://ecn-alumni-api.herokuapp.com/graphql;
+    }
+      
+  }
+}

@@ -9,16 +9,15 @@ module.exports = {
 	mode: 'development',
 	entry: path.resolve(__dirname, '../src/index.jsx'),
 	devServer: {
-		contentBase: path.resolve(__dirname, '../../dist/public'),
-		watchContentBase: true,
 		proxy: {
 			'/api': 'http://localhost:3000/graphql'
-		}
+		},
+		historyApiFallback: true
 	},
 	output: {
 		filename: 'compiled.js',
-		path: path.resolve(__dirname, '../../dist/public'),
-		publicPath: '/'
+		path: path.resolve(__dirname, '../dist/public'),
+		publicPath: '/public'
 	},
 	module: {
 		rules: [

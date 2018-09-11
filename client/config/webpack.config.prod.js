@@ -1,15 +1,14 @@
 const path = require('path');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const ExtractTextPlugin = require("extract-text-webpack-plugin");
-const ManifestPlugin = require('webpack-manifest-plugin');
 const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
+const RelayCompilerWebpackPlugin = require('relay-compiler-webpack-plugin');
 
 module.exports = {
 	entry: path.resolve(__dirname, '../src/index.jsx'),
 	output: {
 		filename: 'bundle.[chunkhash:8].js',
-		path: path.resolve(__dirname, '../../dist/public'),
+		path: path.resolve(__dirname, '../dist/public'),
 		publicPath: '/public'
 	},
 	module: {
@@ -19,14 +18,7 @@ module.exports = {
 			include: path.resolve(__dirname, '../src'),
 			exclude: /node_modules/,
 			loaders: 'babel-loader'
-		},
-		{
-			test: /\.scss$/,
-			use: ExtractTextPlugin.extract({
-				fallback: 'style-loader',
-				use: ['css-loader', 'sass-loader']
-			})
-		},
+		}
 		]
 	},
 	plugins: [
@@ -50,11 +42,10 @@ module.exports = {
             sourceMap: true,
 		}
     }),
-    new ExtractTextPlugin({
-      filename: 'style.[contenthash:8].css',
-    }),
-    new ManifestPlugin({
-      fileName: 'asset-manifest.json',
+	new RelayCompilerWebpackPlugin({
+     	schema: path.resolve(__dirname, '../../schema.graphql'), // or schema.json or a GraphQLSchema instance
+     	src: path.resolve(__dirname, '../src'),
+     	extensions: ['js', 'jsx']
     })
 	],
 	resolve: {

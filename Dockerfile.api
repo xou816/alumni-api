@@ -1,0 +1,8 @@
+FROM node
+RUN mkdir -p /var/app/api
+WORKDIR /var/app/api
+COPY api/package.json /var/app/api
+RUN npm i --build-from-source
+COPY api/dist /var/app/api/dist
+COPY schema.graphql /var/app
+CMD /usr/local/bin/node dist/api/index.js

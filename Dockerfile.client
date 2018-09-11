@@ -1,0 +1,4 @@
+FROM nginx
+COPY client/nginx.conf.template /etc/nginx/nginx.conf.template
+COPY client/dist /usr/share/nginx/html
+CMD /bin/bash -c "envsubst '\$PORT' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf" && nginx -g 'daemon off;'
